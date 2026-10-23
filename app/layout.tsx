@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Lock, Sprout } from "lucide-react";
+import { Lock } from "lucide-react";
+import Image from "next/image";
 import { Suspense } from "react";
 import { MainNav } from "@/components/layout/main-nav";
 import { PreferencesSync } from "@/components/layout/preferences-sync";
@@ -46,11 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Lewati ke konten utama
         </a>
-        <aside className="border-b border-border bg-surface print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-b-0 md:p-4">
+        <aside className="border-b border-border bg-surface print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-r md:border-b-0 md:p-4">
           <div className="flex items-center gap-2.5 px-4 py-3 md:mb-6 md:px-2 md:py-1">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-              <Sprout className="size-4.5" aria-hidden />
-            </span>
+            {/* Dekoratif: nama aplikasi sudah tertulis di sebelahnya. */}
+            <Image src="/logo.png" alt="" width={40} height={40} priority className="size-10 shrink-0" />
             <div className="leading-tight">
               <p className="font-semibold">Habit Tracker</p>
               <p className="text-xs text-muted">Kebiasaan kecil, setiap hari</p>
