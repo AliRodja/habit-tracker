@@ -308,6 +308,8 @@ habit-tracker/
 │   └── seed.ts                   # data contoh 1 tahun untuk uji
 ├── prisma.config.ts              # lokasi skema, migrasi, seed, dan DATABASE_URL (Prisma 7)
 ├── vitest.config.mts
+├── playwright.config.ts          # E2E memakai database terpisah data/e2e.db
+├── e2e/                          # skenario Playwright
 ├── .env.example                  # contoh DATABASE_URL
 ├── data/                         # habits.db (masuk .gitignore)
 └── tests/
@@ -470,7 +472,7 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 | Fase | Cakupan | Keluaran |
 |---|---|---|
 | 1. Fondasi ✅ | Inisialisasi Next.js, Tailwind, Prisma + SQLite, skema, *seed* data setahun, layout & navigasi | Aplikasi berjalan dengan data contoh |
-| 2. Habit | FR-01 s.d. FR-05 | Halaman Habit lengkap dengan arsip |
+| 2. Habit ✅ | FR-01 s.d. FR-05 | Halaman Habit lengkap dengan arsip |
 | 3. Pencatatan | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
 | 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
 | 5. Laporan | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |

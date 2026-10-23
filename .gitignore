@@ -47,3 +47,7 @@ next-env.d.ts
 # data lokal (SQLite) dan cadangan otomatis
 /data/*
 !/data/.gitkeep
+
+# playwright
+/test-results
+/playwright-report

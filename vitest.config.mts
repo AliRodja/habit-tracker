@@ -8,5 +8,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    globalSetup: ["tests/setup/global-setup.ts"],
+    env: { DATABASE_URL: "file:./data/test.db" },
+    // Test layanan berbagi satu file SQLite, sehingga berkas dijalankan berurutan.
+    fileParallelism: false,
   },
 });
