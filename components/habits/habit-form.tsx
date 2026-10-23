@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-import { HABIT_COLORS, MAX_ACTIVE_HABITS } from "@/lib/constants";
-import { HABIT_COLOR_STYLES } from "@/lib/habit-colors";
+import { useActionState, useEffect } from "react";
+import { FormStatus } from "@/components/ui/notice";
+import { btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/ui/styles";
 import { initialFormState, type FormState } from "@/lib/actions/types";
-import { btnPrimary, inputClass } from "@/components/ui/styles";
+import { HABIT_COLORS } from "@/lib/constants";
+import { HABIT_COLOR_STYLES } from "@/lib/habit-colors";
 
 export interface HabitFormValues {
   name: string;
@@ -19,16 +20,20 @@ interface HabitFormProps {
   defaults: HabitFormValues;
   today: string;
   submitLabel: string;
-  /** Dinonaktifkan saat batas 5 habit aktif tercapai (FR-01). */
-  disabledReason?: string;
   idPrefix: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function HabitForm({ action, defaults, today, submitLabel, disabledReason, idPrefix }: HabitFormProps) {
+export function HabitForm({ action, defaults, today, submitLabel, idPrefix, onSuccess, onCancel }: HabitFormProps) {
   const [state, formAction, pending] = useActionState(action, initialFormState);
   // Form direset React setelah action selesai; isian dikembalikan dari state agar tidak hilang saat galat.
   const values = { ...defaults, ...state.values };
   const errorOf = (field: string) => state.fieldErrors?.[field]?.[0];
+
+  useEffect(() => {
+    if (state.status === "success") onSuccess?.();
+  }, [state, onSuccess]);
 
   function field(name: keyof HabitFormValues, label: string, input: (props: object) => React.ReactNode, hint?: string) {
     const error = errorOf(name);
@@ -43,17 +48,17 @@ export function HabitForm({ action, defaults, today, submitLabel, disabledReason
     };
     return (
       <div>
-        <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        <label htmlFor={id} className={labelClass}>
           {label}
         </label>
         {input(props)}
         {hint && !error && (
-          <p id={`${id}-hint`} className="mt-1 text-xs text-muted">
+          <p id={`${id}-hint`} className="mt-1.5 text-xs text-muted">
             {hint}
           </p>
         )}
         {error && (
-          <p id={`${id}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
+          <p id={`${id}-error`} className="mt-1.5 text-sm text-danger">
             {error}
           </p>
         )}
@@ -63,68 +68,55 @@ export function HabitForm({ action, defaults, today, submitLabel, disabledReason
 
   return (
     <form action={formAction} className="grid gap-4">
-      <fieldset disabled={Boolean(disabledReason) || pending} className="grid gap-4 disabled:opacity-60">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {field("name", "Nama", (p) => (
-            <input {...p} type="text" required maxLength={60} placeholder="Minum Air" autoComplete="off" />
-          ))}
-          {field("target", "Target harian (opsional)", (p) => (
-            <input {...p} type="text" placeholder="8 gelas" autoComplete="off" />
-          ))}
-        </div>
+      <fieldset disabled={pending} className="grid gap-4">
+        {field("name", "Nama", (p) => <input {...p} type="text" required maxLength={60} placeholder="Contoh: Minum Air" autoComplete="off" />)}
 
-        {field("description", "Deskripsi (opsional)", (p) => (
-          <textarea {...p} rows={2} placeholder="Minum air putih sepanjang hari" />
-        ))}
+        {field(
+          "target",
+          "Target harian (opsional)",
+          (p) => <input {...p} type="text" placeholder="Contoh: 8 gelas" autoComplete="off" />,
+          "Hanya sebagai pengingat. Penilaian tetap selesai atau belum.",
+        )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {field(
-            "startDate",
-            "Tanggal mulai",
-            (p) => <input {...p} type="date" required max={today} />,
-            "Catatan sebelum tanggal ini tidak dihitung dalam statistik.",
+        {field("description", "Deskripsi (opsional)", (p) => <textarea {...p} rows={2} placeholder="Contoh: Minum air putih sepanjang hari" />)}
+
+        {field(
+          "startDate",
+          "Tanggal mulai",
+          (p) => <input {...p} type="date" required max={today} />,
+          "Hari-hari sebelum tanggal ini tidak dihitung di statistik.",
+        )}
+
+        <fieldset>
+          <legend className={labelClass}>Warna</legend>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {HABIT_COLORS.map((color) => (
+              <label key={color} className="cursor-pointer">
+                <input type="radio" name="color" value={color} defaultChecked={values.color === color} className="peer sr-only" />
+                <span className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2 text-sm peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:font-medium peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+                  <span className={`size-3.5 rounded-full ${HABIT_COLOR_STYLES[color].dot}`} aria-hidden />
+                  {HABIT_COLOR_STYLES[color].label}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errorOf("color") && <p className="mt-1.5 text-sm text-danger">{errorOf("color")}</p>}
+        </fieldset>
+
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4">
+          <div className="mr-auto">
+            <FormStatus status={state.status === "error" ? "error" : "idle"} message={state.message} />
+          </div>
+          {onCancel && (
+            <button type="button" className={btnSecondary} onClick={onCancel}>
+              Batal
+            </button>
           )}
-
-          <fieldset>
-            <legend className="mb-1 text-sm font-medium">Warna</legend>
-            <div className="flex flex-wrap gap-2">
-              {HABIT_COLORS.map((color) => (
-                <label key={color} className="cursor-pointer">
-                  <input
-                    type="radio"
-                    name="color"
-                    value={color}
-                    defaultChecked={values.color === color}
-                    className="peer sr-only"
-                  />
-                  <span className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs peer-checked:border-foreground peer-checked:font-semibold peer-focus-visible:outline-2 peer-focus-visible:outline-foreground">
-                    <span className={`size-3 rounded-full ${HABIT_COLOR_STYLES[color].dot}`} aria-hidden />
-                    {HABIT_COLOR_STYLES[color].label}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {errorOf("color") && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errorOf("color")}</p>}
-          </fieldset>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
           <button type="submit" className={btnPrimary}>
             {pending ? "Menyimpan…" : submitLabel}
           </button>
-          <div role="status" aria-live="polite" className="text-sm">
-            {state.status === "success" && <span className="text-emerald-700 dark:text-emerald-400">{state.message}</span>}
-            {state.status === "error" && state.message && (
-              <span className="text-red-600 dark:text-red-400">{state.message}</span>
-            )}
-          </div>
         </div>
       </fieldset>
-      {disabledReason && (
-        <p className="text-sm text-muted">
-          {disabledReason} (maksimal {MAX_ACTIVE_HABITS} habit aktif)
-        </p>
-      )}
     </form>
   );
 }

@@ -4,14 +4,14 @@ import type { HabitRow } from "@/lib/reports";
 
 /** Tabel per habit (FR-14.5, FR-16.5). `showStreak` menambah kolom streak terpanjang. */
 export function HabitStatsTable({ rows, showStreak = false }: { rows: HabitRow[]; showStreak?: boolean }) {
-  if (rows.length === 0) return <p className="text-sm text-muted">Belum ada habit pada periode ini.</p>;
+  if (rows.length === 0) return <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted">Belum ada habit pada periode ini.</p>;
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm shadow-black/[0.02]">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border text-muted">
             <th scope="col" className="px-4 py-2 font-medium">Habit</th>
-            <th scope="col" className="px-4 py-2 text-right font-medium">Centang</th>
+            <th scope="col" className="px-4 py-2 text-right font-medium">Selesai</th>
             <th scope="col" className="px-4 py-2 text-right font-medium">Tingkat</th>
             {showStreak && <th scope="col" className="px-4 py-2 text-right font-medium">Streak terpanjang</th>}
           </tr>

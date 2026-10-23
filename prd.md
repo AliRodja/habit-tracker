@@ -23,7 +23,7 @@ Landasan konseptualnya adalah studi Phillippa Lally dkk. (University College Lon
 3. Pengguna sulit melihat pola jangka panjang (bulanan, tahunan) dari catatan harian mentah.
 
 ### 1.2 Target Pengguna
-Individu (pengguna tunggal) yang ingin membangun hingga 5 kebiasaan utama, nyaman menjalankan aplikasi di komputernya sendiri, dan mengutamakan privasi data.
+Individu (pengguna tunggal) yang ingin fokus membangun beberapa kebiasaan utama (bawaan 5, dapat diatur 1–10), nyaman menjalankan aplikasi di komputernya sendiri, dan mengutamakan privasi data.
 
 ---
 
@@ -58,7 +58,7 @@ Definisi berikut menjadi acuan tunggal untuk seluruh perhitungan.
 |---|---|
 | **Tanggal** | String `YYYY-MM-DD` dalam zona waktu pengguna (default `Asia/Jakarta`). Tidak menyimpan jam, sehingga bebas dari pergeseran zona waktu. |
 | **Hari Ini** | Tanggal saat ini menurut zona waktu pada Pengaturan. |
-| **Habit Aktif** | Habit dengan `isActive = true`. Maksimal **5** habit aktif sekaligus. |
+| **Habit Aktif** | Habit dengan `isActive = true`. Jumlahnya dibatasi oleh **Batas Habit Aktif** di Pengaturan: bawaan **5**, dapat diatur **1–10** (FR-20). Habit di arsip tidak dihitung. |
 | **Habit Eligible pada tanggal *d*** | Habit yang `startDate ≤ d`, dan (`archivedAt` kosong atau `d < archivedAt`), dan `d ≤ Hari Ini`. Hanya pasangan (habit, tanggal) yang eligible yang dihitung dalam penyebut persentase. |
 | **Habit-Day** | Satu pasangan (habit, tanggal) yang eligible. Satuan dasar perhitungan persentase. |
 | **Centang** | `HabitRecord` dengan `completed = true`. |
@@ -88,7 +88,7 @@ Pengguna dapat membuat habit baru dengan atribut berikut.
 | Tanggal Mulai | Ya (default Hari Ini) | Tidak boleh di masa depan | 2026-10-23 |
 
 Kriteria penerimaan:
-1. Tombol "Tambah Habit" dinonaktifkan dan menampilkan pesan apabila sudah ada 5 habit aktif.
+1. Bila jumlah habit aktif sudah mencapai batas, tombol "Tambah habit" disembunyikan dan halaman menampilkan pesan beserta tautan untuk menaikkan batas di Pengaturan.
 2. Habit baru otomatis ditempatkan di urutan terakhir.
 3. Validasi gagal menampilkan pesan galat di bawah kolom terkait tanpa menghapus isian lain.
 
@@ -195,10 +195,12 @@ Data disimpan pada satu file SQLite (default `./data/habits.db`) melalui Prisma 
 3. Mode **Gabung (Merge):** *upsert* berdasarkan `id` habit dan pasangan (`habitId`, `date`); data dari file menimpa data lokal yang bentrok.
 4. Mode **Ganti (Replace):** menghapus seluruh data lalu memasukkan data file. Sistem **otomatis membuat cadangan JSON** sebelum penggantian.
 5. Impor dijalankan dalam satu transaksi basis data; bila gagal, tidak ada data yang berubah.
-6. Impor yang menghasilkan lebih dari 5 habit aktif ditolak dengan pesan yang menjelaskan cara menyesuaikannya.
+6. Impor yang menghasilkan habit aktif melebihi batas ditolak dengan pesan yang menjelaskan cara menyesuaikannya. Mode Gabung memakai batas lokal yang berlaku; mode Ganti dengan pengaturan di berkas memakai batas dari berkas.
 
 **FR-20 — Pengaturan**
-Zona waktu (default `Asia/Jakarta`), hari awal minggu (default Senin), tema (terang/gelap/sistem), serta zona bahaya "Hapus Semua Data" dengan konfirmasi ketik.
+Zona waktu (default `Asia/Jakarta`), **batas habit aktif** (default 5, pilihan 1–10), hari awal minggu (default Senin), tema (terang/gelap/sistem), serta zona bahaya "Hapus Semua Data" dengan konfirmasi ketik.
+
+Batas habit aktif tidak dapat diturunkan di bawah jumlah habit aktif saat ini; pengguna diminta mengarsipkan sebagian habit terlebih dahulu (tidak ada pengarsipan otomatis, agar tidak ada habit yang hilang dari Hari Ini tanpa disadari).
 
 **Catatan implementasi pengelolaan data (Fase 6)**
 
@@ -219,7 +221,7 @@ Keputusan yang melengkapi FR-18 sampai FR-20:
 
 | ID | Sebagai pengguna, saya ingin… | Agar… | FR |
 |---|---|---|---|
-| US-01 | membuat hingga 5 habit dengan target dan warna | daftar kebiasaan sesuai tujuan saya | FR-01 |
+| US-01 | membuat beberapa habit (bawaan maks. 5, dapat diatur hingga 10) dengan target dan warna | daftar kebiasaan sesuai tujuan saya | FR-01 |
 | US-02 | mencentang habit hari ini dari halaman utama | pencatatan cepat setiap hari | FR-06 |
 | US-03 | mengisi centang hari kemarin yang terlupa | data tetap akurat | FR-09 |
 | US-04 | melihat *streak* dan progres 66 hari | termotivasi untuk konsisten | FR-12, FR-13 |
@@ -378,14 +380,14 @@ model HabitRecord {
 }
 
 model Setting {
-  key   String @id   // "timezone" | "weekStartsOn" | "theme"
+  key   String @id   // "timezone" | "weekStartsOn" | "theme" | "maxActiveHabits"
   value String
 }
 ```
 
 Aturan data:
 1. Mencentang melakukan *upsert* `completed = true`; menghapus centang mengubah menjadi `completed = false` (catatan `note` tetap tersimpan). Seluruh perhitungan hanya menghitung `completed = true`.
-2. Batas 5 habit aktif ditegakkan di lapisan *service* (SQLite tidak mendukung *constraint* bersyarat semacam ini secara sederhana).
+2. Batas habit aktif (pengaturan `maxActiveHabits`, bawaan 5) ditegakkan di lapisan *service* dalam transaksi yang sama dengan penghitungan habit aktif (SQLite tidak mendukung *constraint* bersyarat semacam ini secara sederhana).
 3. Volume maksimum per tahun sekitar 5 × 366 = 1.830 catatan, sehingga seluruh *query* laporan tahunan cukup satu kali pengambilan berdasarkan rentang `date`.
 
 ---
@@ -396,15 +398,15 @@ Aturan data:
 
 | Action | Input | Keluaran / Aturan |
 |---|---|---|
-| `createHabit` | name, target?, description?, color, startDate | Gagal bila sudah 5 habit aktif atau nama duplikat |
+| `createHabit` | name, target?, description?, color, startDate | Gagal bila jumlah habit aktif sudah mencapai batas atau nama duplikat |
 | `updateHabit` | id, field yang diubah | Validasi sama dengan create |
 | `archiveHabit` | id | Mengisi `archivedAt = Hari Ini`, `isActive = false` |
-| `restoreHabit` | id | Gagal bila habit aktif sudah 5 |
+| `restoreHabit` | id | Gagal bila jumlah habit aktif sudah mencapai batas |
 | `deleteHabit` | id, confirmName | Hanya untuk habit nonaktif; `confirmName` harus sama |
 | `reorderHabits` | daftar id terurut | Memperbarui `orderIndex` dalam satu transaksi |
 | `setRecord` | habitId, date, completed | Tolak tanggal masa depan atau di luar rentang eligible |
 | `setRecordNote` | habitId, date, note | Maks. 200 karakter |
-| `updateSettings` | timezone?, weekStartsOn?, theme? | Validasi nilai yang diizinkan |
+| `updateSettings` | timezone, weekStartsOn, theme, maxActiveHabits | Validasi nilai yang diizinkan; batas tidak boleh di bawah jumlah habit aktif |
 | `resetAllData` | confirmText = "HAPUS" | Membuat cadangan otomatis sebelum menghapus |
 
 ### 9.2 Route Handlers
@@ -458,7 +460,7 @@ date,Minum Air,Olahraga,Membaca,Menulis Jurnal,Tidur Teratur,progress
 |---|---|---|---|---|
 | TC-01 | Tambah habit valid | Isi nama "Membaca", simpan | Habit muncul di urutan terakhir | FR-01 |
 | TC-02 | Nama kosong | Simpan tanpa nama | Pesan "Nama wajib diisi", data tidak tersimpan | FR-01 |
-| TC-03 | Batas 5 habit | Tambah habit ke-6 | Tombol nonaktif / pesan batas tercapai | FR-01 |
+| TC-03 | Batas habit aktif (bawaan 5) | Tambah habit ke-6 | Tombol nonaktif / pesan batas tercapai | FR-01 |
 | TC-04 | Nama duplikat | Tambah "minum air" saat "Minum Air" aktif | Pesan nama sudah digunakan | FR-01 |
 | TC-05 | Centang hari ini | Klik centang di dashboard | Status berubah instan, progres harian diperbarui | FR-06, FR-08 |
 | TC-06 | Centang tanggal lalu | Centang tanggal 3 hari lalu di grid | Tersimpan, laporan ikut berubah | FR-09 |
@@ -514,7 +516,7 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 | NFR-02 Keamanan | **Lulus.** Alamat jaringan lokal menolak koneksi; `Host` asing dan POST lintas origin ditolak (403); input divalidasi Zod di server. | `e2e/quality.spec`, `e2e/settings.spec`, `tests/security` |
 | NFR-03 Kinerja muat | **Lulus.** Build produksi di localhost: halaman utama 0,2 dtk pada request pertama, halaman lain 17–50 ms, termasuk seluruh laporan dan Pengaturan (target < 1 dtk), dengan data seed setahun. | pengukuran `curl` |
 | NFR-04 Kinerja interaksi | **Lulus.** Umpan balik centang 8,8 ms dengan server yang sengaja ditahan 1,5 dtk (target < 100 ms); penyimpanan ke DB ±50 ms (target < 300 ms). | `e2e/quality.spec` |
-| NFR-05 Kinerja laporan | **Lulus.** Laporan tahunan + bulanan untuk 5 habit × 366 hari ±15 ms (target < 300 ms). | pengukuran Vitest |
+| NFR-05 Kinerja laporan | **Lulus.** Laporan tahunan + bulanan untuk 5 habit × 366 hari ±15 ms, dan untuk batas maksimum 10 habit ±24 ms (target < 300 ms). | pengukuran Vitest |
 | NFR-06 Responsif | **Lulus.** Tanpa scroll horizontal halaman pada 1280, 768, dan 390 px di seluruh halaman; grid dan tabel dapat di-*scroll* di dalam kartunya. | `e2e/quality.spec` |
 | NFR-07 Aksesibilitas | **Lulus.** Nol pelanggaran WCAG 2.0/2.1 A dan AA (axe-core) pada 8 halaman dalam tema terang, gelap (OS), dan gelap pilihan pengguna. Seluruh centang dapat dioperasikan dengan keyboard dan punya label aksesibel; informasi tidak hanya lewat warna (ikon centang, teks delta, label sel); tautan "Lewati ke konten utama"; menghormati `prefers-reduced-motion`; tekstur heatmap untuk cetak dan `forced-colors`. | `e2e/quality.spec` |
 | NFR-08 Integritas data | **Lulus.** *Unique constraint* (habit, tanggal) dan impor transaksional (rollback teruji, tidak ada data berubah saat gagal). | `tests/record-service`, `tests/io-service` |
@@ -543,7 +545,7 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 2. Jadwal habit tidak harian (mis. hanya Senin, Rabu, Jumat) yang memengaruhi aturan eligible.
 3. Pengingat lokal melalui notifikasi browser.
 4. Mode PWA agar dapat dipasang seperti aplikasi.
-5. Batas jumlah habit yang dapat diatur di Pengaturan.
+5. ~~Batas jumlah habit yang dapat diatur di Pengaturan.~~ **Selesai:** pengaturan "Batas habit aktif" (1–10, bawaan 5).
 
 ---
 

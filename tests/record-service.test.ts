@@ -16,6 +16,7 @@ const find = (habitId: string, date: string) => db.habitRecord.findUnique({ wher
 beforeEach(async () => {
   await db.habitRecord.deleteMany();
   await db.habit.deleteMany();
+  await db.setting.deleteMany(); // pengaturan (mis. batas habit) dari file tes lain tidak boleh terbawa
 });
 
 describe("setRecord", () => {

@@ -1,12 +1,14 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useId, useOptimistic, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { setRecord, setRecordNote } from "@/lib/actions/record-actions";
 import { formatDayLong, formatPercent, formatWeekdayShort } from "@/lib/format";
 import { rowProgress, type GridRow } from "@/lib/grid";
 import { colorDot } from "@/lib/habit-colors";
-import { btnPrimary, btnSecondary, inputClass } from "@/components/ui/styles";
+import { dialogClass } from "@/components/ui/modal";
+import { Notice } from "@/components/ui/notice";
+import { btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/ui/styles";
 
 export interface GridHabit {
   id: string;
@@ -118,7 +120,7 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm shadow-black/[0.02]">
         <table ref={tableRef} onKeyDown={onKeyDown} className="w-full border-collapse text-sm">
           <caption className="sr-only">
             {title}. Gunakan tombol panah untuk berpindah sel, Spasi atau Enter untuk mencentang, dan N untuk catatan.
@@ -132,7 +134,7 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
                 <th key={habit.id} scope="col" className="px-1 py-2 text-center font-medium">
                   <span className="flex flex-col items-center gap-1">
                     <span className={`size-2.5 rounded-full ${colorDot(habit.color)}`} aria-hidden />
-                    <span className={compact ? "max-w-14 truncate text-xs" : "max-w-24 truncate"} title={habit.name}>
+                    <span className={`line-clamp-2 text-center leading-tight ${compact ? "max-w-16 text-xs" : "max-w-28"}`} title={habit.name}>
                       {habit.name}
                     </span>
                   </span>
@@ -147,14 +149,14 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
             {optimisticRows.map((row, r) => {
               const progress = rowProgress(row);
               return (
-                <tr key={row.date} className={`border-b border-border last:border-b-0 ${row.isToday ? "bg-amber-100/60 dark:bg-amber-400/10" : ""}`}>
+                <tr key={row.date} className={`border-b border-border last:border-b-0 ${row.isToday ? "bg-highlight" : ""}`}>
                   <th
                     scope="row"
-                    className={`sticky left-0 whitespace-nowrap px-3 py-1 text-left font-normal ${row.isToday ? "bg-amber-100 dark:bg-stone-800" : "bg-surface"}`}
+                    className={`sticky left-0 whitespace-nowrap px-3 py-1 text-left font-normal ${row.isToday ? "bg-highlight" : "bg-surface"}`}
                   >
                     <span className="tabular-nums">{row.date.slice(8)}</span>{" "}
                     <span className={row.isToday ? undefined : "text-muted"}>{formatWeekdayShort(row.date)}</span>
-                    {row.isToday && <span className="ml-1.5 rounded bg-foreground px-1 py-0.5 text-[10px] font-semibold text-background">Hari ini</span>}
+                    {row.isToday && <span className="ml-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground">Hari ini</span>}
                   </th>
                   {row.cells.map((cell, c) => {
                     const habit = habits[c];
@@ -180,7 +182,7 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
                             event.preventDefault();
                             openNote(r, c);
                           }}
-                          className={`relative mx-auto flex items-center justify-center rounded-md border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-foreground ${
+                          className={`relative mx-auto flex items-center justify-center rounded-md border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
                             compact ? "size-6" : "size-8"
                           } ${
                             !cell.eligible
@@ -206,38 +208,56 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
         </table>
       </div>
 
-      <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
-        {error}
-      </p>
+      <div role="alert" className="mt-2">
+        {error && <Notice tone="danger">{error}</Notice>}
+      </div>
 
-      <dialog
-        ref={dialogRef}
-        onClose={() => setNoteTarget(null)}
-        aria-labelledby={`${uid}-note-title`}
-        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border bg-surface p-5 text-foreground backdrop:bg-black/50"
-      >
+      <dialog ref={dialogRef} onClose={() => setNoteTarget(null)} aria-labelledby={`${uid}-note-title`} className={dialogClass}>
         {noteTarget && noteCell && noteHabit && (
-          <form action={saveNote} className="grid gap-3" key={`${noteDate}-${noteHabit.id}`}>
-            <h2 id={`${uid}-note-title`} className="text-lg font-semibold">
-              Catatan: {noteHabit.name}
-            </h2>
-            <p className="text-sm text-muted">{formatDayLong(noteDate)}</p>
-            <label htmlFor={`${uid}-note-text`} className="sr-only">
-              Catatan
-            </label>
-            <textarea id={`${uid}-note-text`} name="note" rows={3} maxLength={NOTE_MAX} defaultValue={noteCell.note ?? ""} className={inputClass} placeholder="Tulis catatan singkat (maks. 200 karakter)" />
-            {noteError && (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                {noteError}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button type="button" className={btnSecondary} onClick={() => dialogRef.current?.close()}>
-                Batal
+          <form action={saveNote} key={`${noteDate}-${noteHabit.id}`}>
+            <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+              <div>
+                <h2 id={`${uid}-note-title`} className="text-lg font-semibold">
+                  Catatan: {noteHabit.name}
+                </h2>
+                <p className="mt-0.5 text-sm text-muted">{formatDayLong(noteDate)}</p>
+              </div>
+              <button type="button" onClick={() => dialogRef.current?.close()} className="-m-1 rounded-lg p-1 text-muted hover:bg-surface-2 hover:text-foreground" aria-label="Tutup">
+                <X className="size-5" aria-hidden />
               </button>
-              <button type="submit" className={btnPrimary} disabled={pendingNote}>
-                {pendingNote ? "Menyimpan…" : "Simpan"}
-              </button>
+            </div>
+            <div className="grid gap-3 px-5 py-4">
+              <div>
+                <label htmlFor={`${uid}-note-text`} className={labelClass}>
+                  Catatan
+                </label>
+                <textarea
+                  id={`${uid}-note-text`}
+                  name="note"
+                  rows={3}
+                  maxLength={NOTE_MAX}
+                  defaultValue={noteCell.note ?? ""}
+                  className={inputClass}
+                  placeholder="Mis. hanya sempat 3 gelas karena hujan"
+                  aria-describedby={`${uid}-note-hint`}
+                />
+                <p id={`${uid}-note-hint`} className="mt-1.5 text-xs text-muted">
+                  Maksimal {NOTE_MAX} karakter. Kosongkan lalu simpan untuk menghapus catatan.
+                </p>
+              </div>
+              {noteError && (
+                <p role="alert" className="text-sm text-danger">
+                  {noteError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <button type="button" className={btnSecondary} onClick={() => dialogRef.current?.close()}>
+                  Batal
+                </button>
+                <button type="submit" className={btnPrimary} disabled={pendingNote}>
+                  {pendingNote ? "Menyimpan…" : "Simpan"}
+                </button>
+              </div>
             </div>
           </form>
         )}

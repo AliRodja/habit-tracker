@@ -1,31 +1,39 @@
+import { CalendarDays, Keyboard } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Suspense } from "react";
+import { GridLegend } from "@/components/tracker/grid-legend";
 import { TrackingGrid } from "@/components/tracker/tracking-grid";
 import { YearSelect } from "@/components/tracker/year-select";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Loading } from "@/components/ui/loading";
+import { PageHeader } from "@/components/ui/page-header";
+import { PeriodNav } from "@/components/ui/period-nav";
+import { SegmentedNav } from "@/components/ui/segmented-nav";
+import { btnPrimary, btnSecondary } from "@/components/ui/styles";
 import { addMonths, formatYearMonth, monthBounds, parseYearMonth, yearBounds } from "@/lib/dates";
 import { formatMonthName, formatMonthYear } from "@/lib/format";
 import { buildGridRows } from "@/lib/grid";
+import { firstParam, yearRange } from "@/lib/search-params";
 import { listActiveHabits } from "@/lib/services/habit-service";
 import { getRecordsBetween } from "@/lib/services/record-service";
 import { getToday } from "@/lib/services/settings-service";
-import { btnIcon, btnSecondary } from "@/components/ui/styles";
 
 export const metadata: Metadata = { title: "Tracker" };
 
 export default function TrackerPage({ searchParams }: PageProps<"/tracker">) {
   return (
-    <section>
-      <h1 className="text-2xl font-semibold tracking-tight">Tracker</h1>
-      <Suspense fallback={<p className="mt-2 text-muted">Memuat…</p>}>
+    <>
+      <PageHeader
+        title="Tracker"
+        description="Lihat dan isi catatan hari-hari sebelumnya dalam bentuk tabel. Klik kotak untuk mencentang atau membatalkan."
+      />
+      <Suspense fallback={<Loading />}>
         <TrackerContent searchParams={searchParams} />
       </Suspense>
-    </section>
+    </>
   );
 }
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 const monthHref = (year: number, month: number) => `/tracker?view=month&m=${formatYearMonth(year, month)}`;
 const yearHref = (year: number) => `/tracker?view=year&y=${year}`;
@@ -33,28 +41,30 @@ const yearHref = (year: number) => `/tracker?view=year&y=${year}`;
 async function TrackerContent({ searchParams }: { searchParams: PageProps<"/tracker">["searchParams"] }) {
   const params = await searchParams;
   const [today, habits] = await Promise.all([getToday(), listActiveHabits()]);
-  const currentYear = Number(today.slice(0, 4));
-  const minYear = Math.min(currentYear, ...habits.map((h) => Number(h.startDate.slice(0, 4))));
-  const years = Array.from({ length: currentYear - minYear + 1 }, (_, i) => minYear + i);
-  const clampYear = (year: number) => Math.min(currentYear, Math.max(minYear, year));
-
-  const view = first(params.view) === "year" ? "year" : "month";
-  const ym = parseYearMonth(first(params.m)) ?? { year: currentYear, month: Number(today.slice(5, 7)) };
-  const month = { year: clampYear(ym.year), month: ym.year === clampYear(ym.year) ? ym.month : 1 };
-  const yearParam = Number(first(params.y));
-  const year = view === "year" ? clampYear(Number.isInteger(yearParam) && yearParam > 0 ? yearParam : currentYear) : month.year;
 
   if (habits.length === 0) {
     return (
-      <p className="mt-6 text-muted">
-        Belum ada habit aktif.{" "}
-        <Link href="/habits" className="underline underline-offset-2">
-          Tambahkan habit terlebih dahulu
-        </Link>
-        .
-      </p>
+      <EmptyState
+        icon={CalendarDays}
+        title="Belum ada habit untuk dilacak"
+        description="Tambahkan habit terlebih dahulu, lalu kembali ke sini untuk melihat catatan per hari."
+        action={
+          <Link href="/habits?baru=1" className={btnPrimary}>
+            Tambah habit
+          </Link>
+        }
+      />
     );
   }
+
+  const earliest = habits.reduce((min, h) => (h.startDate < min ? h.startDate : min), today);
+  const { years, current, min, clamp } = yearRange(earliest, today);
+  const currentMonth = Number(today.slice(5, 7));
+
+  const view = firstParam(params.view) === "year" ? "year" : "month";
+  const ym = parseYearMonth(firstParam(params.m)) ?? { year: current, month: currentMonth };
+  const month = { year: clamp(ym.year), month: ym.year === clamp(ym.year) ? ym.month : 1 };
+  const year = view === "year" ? clamp(Number(firstParam(params.y))) : month.year;
 
   const gridHabits = habits.map((h) => ({ id: h.id, name: h.name, color: h.color }));
   const range = view === "year" ? yearBounds(year) : monthBounds(month.year, month.month);
@@ -62,84 +72,53 @@ async function TrackerContent({ searchParams }: { searchParams: PageProps<"/trac
 
   const prev = addMonths(month.year, month.month, -1);
   const next = addMonths(month.year, month.month, 1);
-  const hasPrev = prev.year >= minYear;
-  const hasNext = next.year <= currentYear;
+  const isCurrentMonth = month.year === current && month.month === currentMonth;
 
   return (
-    <div className="mt-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="Tampilan" className="flex rounded-lg border border-border bg-surface p-0.5 text-sm">
-          <Link
-            href={monthHref(month.year, month.month)}
-            aria-current={view === "month" ? "page" : undefined}
-            className={`rounded-md px-3 py-1 ${view === "month" ? "bg-foreground text-background" : "text-muted"}`}
-          >
-            Bulanan
-          </Link>
-          <Link
-            href={yearHref(year)}
-            aria-current={view === "year" ? "page" : undefined}
-            className={`rounded-md px-3 py-1 ${view === "year" ? "bg-foreground text-background" : "text-muted"}`}
-          >
-            Tahunan
-          </Link>
-        </div>
-
+        <SegmentedNav
+          label="Tampilan"
+          items={[
+            { href: monthHref(month.year, month.month), label: "Bulanan", active: view === "month" },
+            { href: yearHref(year), label: "Tahunan", active: view === "year" },
+          ]}
+        />
         {view === "month" && (
-          <div className="flex items-center gap-2">
-            {hasPrev ? (
-              <Link href={monthHref(prev.year, prev.month)} className={btnIcon} aria-label="Bulan sebelumnya">
-                <ChevronLeft className="size-4" aria-hidden />
-              </Link>
-            ) : (
-              <span className={`${btnIcon} opacity-50`} aria-hidden>
-                <ChevronLeft className="size-4" />
-              </span>
-            )}
-            <p className="min-w-36 text-center font-medium" aria-live="polite">
-              {formatMonthYear(month.year, month.month)}
-            </p>
-            {hasNext ? (
-              <Link href={monthHref(next.year, next.month)} className={btnIcon} aria-label="Bulan berikutnya">
-                <ChevronRight className="size-4" aria-hidden />
-              </Link>
-            ) : (
-              <span className={`${btnIcon} opacity-50`} aria-hidden>
-                <ChevronRight className="size-4" />
-              </span>
-            )}
-          </div>
+          <PeriodNav
+            label={formatMonthYear(month.year, month.month)}
+            previous={prev.year >= min ? { href: monthHref(prev.year, prev.month), label: "Bulan sebelumnya" } : null}
+            next={next.year <= current ? { href: monthHref(next.year, next.month), label: "Bulan berikutnya" } : null}
+          />
         )}
-
         <YearSelect
           years={years}
           value={year}
           hrefs={Object.fromEntries(years.map((y) => [y, view === "year" ? yearHref(y) : monthHref(y, y === month.year ? month.month : 1)]))}
         />
-
-        {view === "month" && (month.year !== currentYear || month.month !== Number(today.slice(5, 7))) && (
-          <Link href={monthHref(currentYear, Number(today.slice(5, 7)))} className={btnSecondary}>
-            Bulan ini
+        {view === "month" && !isCurrentMonth && (
+          <Link href={monthHref(current, currentMonth)} className={btnSecondary}>
+            Kembali ke bulan ini
           </Link>
         )}
       </div>
 
+      <GridLegend />
+
       {view === "month" ? (
-        <div className="mt-4">
-          <TrackingGrid
-            title={`Tracker ${formatMonthYear(month.year, month.month)}`}
-            habits={gridHabits}
-            rows={buildGridRows(habits, records, range.from, range.to, today)}
-          />
-        </div>
+        <TrackingGrid
+          title={`Tracker ${formatMonthYear(month.year, month.month)}`}
+          habits={gridHabits}
+          rows={buildGridRows(habits, records, range.from, range.to, today)}
+        />
       ) : (
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
             const bounds = monthBounds(year, m);
             const rows = buildGridRows(habits, records.filter((r) => r.date >= bounds.from && r.date <= bounds.to), bounds.from, bounds.to, today);
             return (
-              <div key={m}>
-                <h2 className="mb-2 font-medium capitalize">{formatMonthName(m)}</h2>
+              <div key={m} className="min-w-0">
+                <h2 className="mb-2 font-semibold capitalize">{formatMonthName(m)}</h2>
                 <TrackingGrid title={`Tracker ${formatMonthYear(year, m)}`} habits={gridHabits} rows={rows} compact />
               </div>
             );
@@ -147,10 +126,16 @@ async function TrackerContent({ searchParams }: { searchParams: PageProps<"/trac
         </div>
       )}
 
-      <p className="mt-4 text-xs text-muted">
-        Klik sel untuk mencentang. Klik kanan, tombol <kbd>N</kbd>, atau tombol Menu untuk menambah catatan. Sel abu-abu
-        berada di luar rentang habit atau di masa depan.
-      </p>
+      <details className="rounded-2xl border border-border bg-surface p-4 text-sm">
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
+          <Keyboard className="size-4 text-accent-text" aria-hidden /> Tips: catatan dan pintasan keyboard
+        </summary>
+        <ul className="mt-3 grid gap-1.5 text-muted">
+          <li>Klik kanan sebuah kotak (atau pilih lalu tekan N) untuk menulis catatan harian.</li>
+          <li>Tombol panah memindahkan pilihan antar kotak; Home dan End melompat ke kolom pertama atau terakhir.</li>
+          <li>Spasi atau Enter mencentang dan membatalkan centang.</li>
+        </ul>
+      </details>
     </div>
   );
 }

@@ -109,3 +109,13 @@ export async function setSetting(key: string, value: string) {
     db.close();
   }
 }
+
+/** Kosongkan seluruh habit dan catatan di database e2e. */
+export async function resetEmpty() {
+  const db = open();
+  try {
+    db.exec("DELETE FROM HabitRecord; DELETE FROM Habit;");
+  } finally {
+    db.close();
+  }
+}

@@ -1,4 +1,4 @@
-import { MAX_ACTIVE_HABITS } from "@/lib/constants";
+import { parseHabitLimit } from "@/lib/constants";
 import { db } from "@/lib/db";
 import type { DateString } from "@/lib/dates";
 import { fieldErrorsOf, habitInputSchema, type FieldErrors } from "@/lib/validation/habit";
@@ -10,6 +10,12 @@ export type ServiceResult<T = void> =
 
 const ok = <T>(data: T): ServiceResult<T> => ({ ok: true, data });
 const fail = (message: string, fieldErrors?: FieldErrors): ServiceResult<never> => ({ ok: false, message, fieldErrors });
+
+/** Batas habit aktif dibaca di dalam transaksi yang sama dengan penghitungan habit aktif. */
+async function activeLimit(client: Pick<typeof db, "setting">): Promise<number> {
+  const row = await client.setting.findUnique({ where: { key: "maxActiveHabits" } });
+  return parseHabitLimit(row?.value);
+}
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -29,8 +35,9 @@ export async function createHabit(raw: unknown, today: DateString): Promise<Serv
 
   return db.$transaction(async (tx) => {
     const active = await tx.habit.findMany({ where: { isActive: true }, select: { name: true, orderIndex: true } });
-    if (active.length >= MAX_ACTIVE_HABITS) {
-      return fail(`Batas ${MAX_ACTIVE_HABITS} habit aktif tercapai. Arsipkan salah satu terlebih dahulu.`);
+    const limit = await activeLimit(tx);
+    if (active.length >= limit) {
+      return fail(`Batas ${limit} habit aktif tercapai. Arsipkan salah satu terlebih dahulu, atau naikkan batasnya di Pengaturan.`);
     }
     if (active.some((h) => sameName(h.name, parsed.data.name))) {
       return fail("Periksa kembali isian Anda.", { name: ["Nama sudah digunakan"] });
@@ -84,8 +91,9 @@ export async function restoreHabit(id: string): Promise<ServiceResult> {
     if (habit.isActive) return fail("Habit sudah aktif.");
 
     const active = await tx.habit.findMany({ where: { isActive: true }, select: { name: true, orderIndex: true } });
-    if (active.length >= MAX_ACTIVE_HABITS) {
-      return fail(`Batas ${MAX_ACTIVE_HABITS} habit aktif tercapai. Arsipkan habit lain terlebih dahulu.`);
+    const limit = await activeLimit(tx);
+    if (active.length >= limit) {
+      return fail(`Batas ${limit} habit aktif tercapai. Arsipkan habit lain terlebih dahulu, atau naikkan batasnya di Pengaturan.`);
     }
     if (active.some((h) => sameName(h.name, habit.name))) {
       return fail("Sudah ada habit aktif dengan nama yang sama. Ubah nama salah satunya terlebih dahulu.");

@@ -23,3 +23,7 @@ export const formatDayMonth = (date: DateString) => dayMonth.format(at(date));
 
 /** Nama hari singkat dari nomor hari (0 = Minggu), mis. untuk sumbu grafik pola mingguan. */
 export const weekdayShortOf = (dow: number) => weekdayShort.format(at(`2026-10-${18 + dow}`));
+
+const dateShort = fmt({ day: "numeric", month: "short", year: "numeric" });
+/** Tanggal ringkas untuk dibaca manusia, mis. "1 Jan 2026". */
+export const formatDateShort = (date: DateString) => dateShort.format(at(date));

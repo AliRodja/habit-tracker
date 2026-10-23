@@ -1,6 +1,6 @@
 # Daily Habit Tracker
 
-Aplikasi web *local-first* untuk melacak hingga 5 kebiasaan harian. Seluruh data tersimpan di satu file SQLite di komputer Anda: tanpa akun, tanpa cloud, tanpa telemetri. Laporan harian, mingguan, bulanan, dan tahunan dihitung otomatis.
+Aplikasi web *local-first* untuk melacak kebiasaan harian (bawaan 5 habit aktif, dapat diatur hingga 10). Seluruh data tersimpan di satu file SQLite di komputer Anda: tanpa akun, tanpa cloud, tanpa telemetri. Laporan harian, mingguan, bulanan, dan tahunan dihitung otomatis.
 
 Landasan konseptualnya studi Lally dkk. (2010): kebiasaan rata-rata terbentuk setelah sekitar 66 hari pengulangan, dan melewatkan satu hari tidak menggagalkan prosesnya. Spesifikasi lengkap ada di [prd.md](prd.md).
 
@@ -33,9 +33,9 @@ Atau mode pengembangan: `npm run dev`.
 |---|---|
 | **Hari Ini** | Check-in satu klik, progres harian, streak, dan progres menuju 66 hari |
 | **Tracker** | Grid bulanan dan tahunan bergaya spreadsheet, isi ulang tanggal lalu, catatan harian, navigasi keyboard |
-| **Habit** | Tambah, ubah, urutkan, nonaktifkan, dan hapus permanen (maks. 5 habit aktif) |
+| **Habit** | Tambah, ubah, urutkan, arsipkan, dan hapus permanen (batas habit aktif dapat diatur 1–10 di Pengaturan) |
 | **Laporan** | Mingguan, bulanan, dan tahunan dengan grafik dan heatmap konsistensi |
-| **Pengaturan** | Zona waktu, awal minggu, tema, ekspor (JSON/CSV), impor, dan hapus semua data |
+| **Pengaturan** | Zona waktu, batas habit aktif, awal minggu, tema, ekspor (JSON/CSV), impor, dan hapus semua data |
 
 ### Pintasan keyboard di Tracker
 
@@ -58,7 +58,7 @@ Atau mode pengembangan: `npm run dev`.
 |---|---|
 | `npm run dev` / `build` / `start` | Pengembangan, build produksi, jalankan produksi (terikat ke `127.0.0.1`) |
 | `npm test` | Unit test dan test layanan dengan database SQLite sungguhan (Vitest) |
-| `npm run test:e2e` | Tes end-to-end di browser (Playwright), memakai database terpisah `data/e2e.db` |
+| `npm run test:e2e` | Tes end-to-end di browser (Playwright), memakai database `data/e2e.db` dan folder build `.next-e2e` sendiri sehingga dapat berjalan bersamaan dengan `npm run dev` |
 | `npm run typecheck` / `lint` | Pemeriksaan tipe dan gaya kode |
 | `npm run db:migrate` | Membuat migrasi baru saat skema berubah (pengembangan) |
 | `npm run db:deploy` | Menerapkan migrasi yang ada |

@@ -111,7 +111,7 @@ export function Heatmap({ days, year }: { days: HeatmapDay[]; year: number }) {
                   }}
                   onBlur={() => setTip(null)}
                   onKeyDown={(event) => onKeyDown(event, i)}
-                  className={`rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-foreground ${day.future ? "opacity-40" : ""}`}
+                  className={`rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${day.future ? "opacity-40" : ""}`}
                   style={{ background: `var(--hm-${day.level})` }}
                 />
               );

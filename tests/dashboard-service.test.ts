@@ -19,6 +19,7 @@ const check = (habitId: string, dates: string[]) =>
 beforeEach(async () => {
   await db.habitRecord.deleteMany();
   await db.habit.deleteMany();
+  await db.setting.deleteMany(); // pengaturan (mis. batas habit) dari file tes lain tidak boleh terbawa
 });
 
 describe("getTodayItems (FR-06, FR-12, FR-13)", () => {

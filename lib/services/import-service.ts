@@ -2,15 +2,17 @@ import { db } from "@/lib/db";
 import type { DateString } from "@/lib/dates";
 import { buildImportPlan, parseImportText, type ExistingState, type ImportMode, type ImportPlan } from "@/lib/io/plan";
 import { writeBackup } from "./backup-service";
+import { getActiveHabitLimit } from "./settings-store";
 
 const CHUNK = 500;
 
 export async function loadExistingState(): Promise<ExistingState> {
-  const [habits, records] = await Promise.all([
+  const [habits, records, maxActive] = await Promise.all([
     db.habit.findMany({ select: { id: true, name: true, isActive: true } }),
     db.habitRecord.findMany({ select: { habitId: true, date: true } }),
+    getActiveHabitLimit(),
   ]);
-  return { habits, recordKeys: new Set(records.map((r) => `${r.habitId}|${r.date}`)) };
+  return { habits, recordKeys: new Set(records.map((r) => `${r.habitId}|${r.date}`)), maxActive };
 }
 
 /** FR-19.2: validasi dan pratinjau tanpa menyimpan apa pun (dryRun). */

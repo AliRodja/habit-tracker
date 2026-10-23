@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Folder build terpisah untuk tes E2E (lihat distDir di next.config.ts).
+    ".next-e2e/**",
+    // Hasil `prisma generate`.
+    "lib/generated/**",
   ]),
 ]);
 

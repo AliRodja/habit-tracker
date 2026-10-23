@@ -44,15 +44,41 @@ test("pengaturan: tema, awal minggu, dan zona waktu tersimpan dan bertahan setel
   await expect(page.getByLabel("Zona waktu")).toHaveValue("Asia/Makassar");
   await expect(page.getByLabel("Minggu", { exact: true })).toBeChecked();
 
-  // Varian dark: Tailwind mengikuti data-theme, bukan hanya pengaturan OS.
-  const followsDataTheme = await page.evaluate(() =>
-    [...document.styleSheets].some((sheet) => [...sheet.cssRules].some((rule) => rule.cssText.includes("dark\\:text-red-400") && rule.cssText.includes('data-theme="dark"'))),
-  );
-  expect(followsDataTheme).toBe(true);
+  // Token warna ikut berganti mengikuti data-theme, bukan hanya pengaturan OS.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--danger").trim())).toBe("#f87171");
 
   await page.getByText("Ikuti sistem", { exact: true }).click();
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
+});
+
+test("pengaturan: batas habit aktif dapat dinaikkan, dan tidak bisa diturunkan di bawah jumlah habit aktif", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByLabel("Batas habit aktif").selectOption("3");
+  await page.getByRole("button", { name: "Simpan pengaturan" }).click();
+  await expect(page.getByText("Pengaturan disimpan.")).toBeVisible();
+
+  await page.goto("/habits");
+  await expect(page.getByText("2 dari 3 habit aktif")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tambah habit" })).toBeVisible();
+
+  // 2 habit aktif: batas 1 ditolak dengan petunjuk, nilai lama tetap tersimpan
+  await page.goto("/settings");
+  await page.getByLabel("Batas habit aktif").selectOption("1");
+  await page.getByRole("button", { name: "Simpan pengaturan" }).click();
+  await expect(page.getByText(/Saat ini ada 2 habit aktif\. Arsipkan 1 habit/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Batas habit aktif")).toHaveValue("3");
+
+  // Batas 2 = jumlah aktif: halaman Habit menunjukkan penuh dan menawarkan menaikkan batas
+  await page.getByLabel("Batas habit aktif").selectOption("2");
+  await page.getByRole("button", { name: "Simpan pengaturan" }).click();
+  await expect(page.getByText("Pengaturan disimpan.")).toBeVisible();
+  await page.goto("/habits");
+  await expect(page.getByText(/Semua 2 slot sedang terpakai/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tambah habit" })).toHaveCount(0);
+  await page.getByRole("link", { name: "naikkan batasnya di Pengaturan" }).click();
+  await expect(page).toHaveURL(/\/settings#umum/);
 });
 
 test("pengaturan: menampilkan lokasi file database dan folder cadangan (FR-17)", async ({ page }) => {
@@ -65,7 +91,7 @@ test("ekspor: JSON, CSV panjang, dan CSV lebar dengan nama berkas bertanda waktu
   await page.goto("/settings");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Cadangan lengkap (JSON)" }).click();
+  await page.getByRole("link", { name: "Unduh JSON" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^habit-tracker-\d{8}-\d{4}\.json$/);
 
@@ -109,7 +135,7 @@ test("impor: berkas rusak menampilkan galat dan tidak mengubah data (TC-18)", as
   await expect(page.getByRole("button", { name: "Terapkan impor" })).toHaveCount(0);
 
   await page.goto("/habits");
-  await expect(page.locator("#active-title + ul li")).toHaveCount(2);
+  await expect(page.locator('section[aria-labelledby="active-title"] li')).toHaveCount(2);
 });
 
 test("impor: pratinjau lalu Gabung menambah habit tanpa menghapus data lokal (FR-19)", async ({ page }) => {
@@ -133,7 +159,7 @@ test("impor: pratinjau lalu Gabung menambah habit tanpa menghapus data lokal (FR
   expect(backups()).toEqual([]); // Gabung tidak membuat cadangan
 
   await page.goto("/habits");
-  await expect(page.locator("#active-title + ul li p.font-medium")).toHaveText(["Minum Air", "Membaca", "Meditasi"]);
+  await expect(page.locator('section[aria-labelledby="active-title"] li p.font-semibold')).toHaveText(["Minum Air", "Membaca", "Meditasi"]);
 });
 
 test("impor: mode Ganti butuh konfirmasi dan membuat cadangan otomatis (FR-19.4, TC-19)", async ({ page }) => {
@@ -158,7 +184,7 @@ test("impor: mode Ganti butuh konfirmasi dan membuat cadangan otomatis (FR-19.4,
   expect(backup.habits.map((h: { name: string }) => h.name)).toEqual(["Minum Air", "Membaca"]);
 
   await page.goto("/habits");
-  await expect(page.locator("#active-title + ul li p.font-medium")).toHaveText(["Satu-satunya"]);
+  await expect(page.locator('section[aria-labelledby="active-title"] li p.font-semibold')).toHaveText(["Satu-satunya"]);
 });
 
 test("impor: CSV hanya mendukung mode Gabung dan menggabungkan catatan berdasarkan nama habit", async ({ page }) => {

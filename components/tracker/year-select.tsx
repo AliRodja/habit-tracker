@@ -17,7 +17,7 @@ export function YearSelect({ years, value, hrefs }: Props) {
       <select
         value={value}
         onChange={(event) => router.push(hrefs[Number(event.target.value)])}
-        className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-foreground"
+        className="h-9 rounded-lg border border-border bg-surface px-2 text-sm focus-visible:outline-2 focus-visible:outline-accent"
       >
         {years.map((year) => (
           <option key={year} value={year}>

@@ -1,5 +1,4 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
-import { formatPercent } from "@/lib/format";
 
 interface DeltaProps {
   /** Selisih dalam poin persentase; null bila tidak ada pembanding. */
@@ -36,13 +35,11 @@ interface StatTileProps {
 
 export function StatTile({ label, value, note, delta }: StatTileProps) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="min-w-0 rounded-2xl border border-border bg-surface p-4 shadow-sm shadow-black/[0.02]">
       <p className="text-sm text-muted">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 break-words text-2xl font-semibold tracking-tight sm:text-3xl">{value}</p>
       {delta && <Delta {...delta} />}
       {note && <p className="mt-1 text-xs text-muted">{note}</p>}
     </div>
   );
 }
-
-export const rateText = (rate: number | null) => formatPercent(rate);

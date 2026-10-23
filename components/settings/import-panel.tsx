@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Notice } from "@/components/ui/notice";
 import { btnDanger, btnPrimary, btnSecondary } from "@/components/ui/styles";
 
 type Mode = "merge" | "replace";
@@ -81,10 +82,20 @@ export function ImportPanel() {
     setError(null);
   };
 
+  const step = (n: number, title: string) => (
+    <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+      <span className="flex size-5 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-text" aria-hidden>
+        {n}
+      </span>
+      {title}
+    </p>
+  );
+
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <div>
-        <label htmlFor="import-file" className="mb-1 block text-sm font-medium">
+        {step(1, "Pilih berkas")}
+        <label htmlFor="import-file" className="sr-only">
           Berkas impor (JSON hasil ekspor atau CSV format panjang)
         </label>
         <input
@@ -96,36 +107,43 @@ export function ImportPanel() {
             setFile(event.target.files?.[0] ?? null);
             reset();
           }}
-          className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          className="block w-full rounded-xl border border-dashed border-border bg-surface-2 p-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:shadow-sm"
         />
+        <p className="mt-1.5 text-xs text-muted">JSON hasil Ekspor (cadangan lengkap) atau CSV format panjang.</p>
       </div>
 
       <fieldset>
-        <legend className="mb-1 text-sm font-medium">Mode</legend>
+        <legend className="contents">{step(2, "Pilih cara mengimpor")}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["merge", "Gabung", "Habit dan catatan dari berkas menimpa data lokal yang bentrok; data lokal lain tetap."],
-              ["replace", "Ganti", "Menghapus seluruh data lalu memasukkan isi berkas. Cadangan JSON dibuat otomatis lebih dulu."],
+              ["merge", "Gabung", "Tambahkan isi berkas ke data yang ada. Data yang sama akan diperbarui; data lain tidak disentuh."],
+              ["replace", "Ganti", "Hapus seluruh data lalu ganti dengan isi berkas. Cadangan dibuat otomatis lebih dulu."],
             ] as const
           ).map(([value, label, hint]) => {
             const disabled = value === "replace" && isCsv;
+            const selected = effectiveMode === value;
             return (
-              <label key={value} className={`rounded-lg border p-3 text-sm ${effectiveMode === value ? "border-foreground" : "border-border"} ${disabled ? "opacity-50" : "cursor-pointer"}`}>
+              <label
+                key={value}
+                className={`flex gap-3 rounded-xl border p-3 text-sm transition-colors ${selected ? "border-accent bg-accent-soft" : "border-border"} ${disabled ? "opacity-50" : "cursor-pointer hover:bg-surface-2"}`}
+              >
                 <input
                   type="radio"
                   name="import-mode"
                   value={value}
-                  checked={effectiveMode === value}
+                  checked={selected}
                   disabled={disabled}
                   onChange={() => {
                     setMode(value);
                     reset();
                   }}
-                  className="mr-2"
+                  className="mt-0.5 accent-[var(--accent)]"
                 />
-                <span className="font-medium">{label}</span>
-                <span className="mt-1 block text-xs text-muted">{disabled ? "Tidak tersedia untuk CSV: CSV tidak memuat atribut habit." : hint}</span>
+                <span>
+                  <span className="font-medium">{label}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{disabled ? "Tidak tersedia untuk CSV, karena CSV tidak memuat detail habit." : hint}</span>
+                </span>
               </label>
             );
           })}
@@ -133,16 +151,18 @@ export function ImportPanel() {
       </fieldset>
 
       <div>
+        {step(3, "Periksa sebelum menerapkan")}
         <button type="button" className={btnSecondary} disabled={!file || busy} onClick={() => send(true)}>
           {busy && !preview ? "Memeriksa…" : "Periksa berkas"}
         </button>
+        <p className="mt-1.5 text-xs text-muted">Pemeriksaan tidak mengubah data apa pun.</p>
       </div>
 
       <div role="status" aria-live="polite" className="grid gap-3">
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <Notice tone="danger">{error}</Notice>}
 
         {applied?.applied && (
-          <p className="rounded-lg border border-emerald-600/40 bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+          <Notice tone="success">
             Impor berhasil: {applied.counts.habits.total} habit dan {applied.counts.records.total} catatan diproses.
             {applied.backupPath && (
               <>
@@ -150,11 +170,11 @@ export function ImportPanel() {
                 Cadangan data sebelumnya disimpan di <span className="break-all font-mono text-xs">{applied.backupPath}</span>
               </>
             )}
-          </p>
+          </Notice>
         )}
 
         {preview && (
-          <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+          <div className="rounded-xl border border-border bg-surface-2/60 p-4 text-sm">
             <p className="font-medium">
               Pratinjau · {preview.format.toUpperCase()} · mode {preview.mode === "merge" ? "Gabung" : "Ganti"}
             </p>
@@ -182,10 +202,10 @@ export function ImportPanel() {
 
             {preview.issueCount > 0 && (
               <div className="mt-3">
-                <p className="font-medium text-red-600 dark:text-red-400">
+                <Notice tone="danger">
                   {preview.issueCount} galat ditemukan. Perbaiki berkas lalu periksa lagi; tidak ada data yang diubah.
-                </p>
-                <ul className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border p-2 text-xs">
+                </Notice>
+                <ul className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface p-2 text-xs">
                   {preview.issues.map((issue, i) => (
                     <li key={i} className="py-0.5">
                       <span className="font-medium">
@@ -203,10 +223,10 @@ export function ImportPanel() {
             )}
 
             {preview.canApply && (
-              <div className="mt-4 grid gap-3">
+              <div className="mt-4 grid gap-3 border-t border-border pt-4">
                 {preview.mode === "replace" && (
                   <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-0.5" />
+                    <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
                     <span>Saya mengerti seluruh data saat ini akan diganti. Cadangan otomatis dibuat sebelum penggantian.</span>
                   </label>
                 )}

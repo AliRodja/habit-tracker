@@ -15,7 +15,7 @@ test("laporan mingguan: tingkat, kartu ringkasan, grafik, tabel, dan tabel per h
   await expect(page.getByRole("heading", { name: "Laporan Mingguan" })).toBeVisible();
 
   // 7 hari terakhir: Minum Air 7 hari eligible (3 tercentang) + Membaca 1 hari = 3 dari 8 habit-hari
-  await expect(page.getByText("3 dari 8 habit-hari")).toBeVisible();
+  await expect(page.getByText("3 dari 8 centang yang mungkin")).toBeVisible();
   await expect(page.getByText("38%", { exact: true }).first()).toBeVisible();
   // periode sebelumnya punya 4 habit-hari eligible tanpa centang → 0% (bukan kosong), jadi delta naik 37,5 poin
   await expect(page.getByText("Naik 37,5 poin dari 7 hari sebelumnya")).toBeVisible();

@@ -17,7 +17,7 @@ export async function buildExportFile(now: Date = new Date()): Promise<ExportFil
     app: EXPORT_APP,
     schemaVersion: EXPORT_SCHEMA_VERSION,
     exportedAt: format(new TZDate(now, settings.timezone), "yyyy-MM-dd'T'HH:mm:ssxxx"),
-    settings: { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn as "0" | "1", theme: settings.theme as Theme },
+    settings: { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn as "0" | "1", theme: settings.theme as Theme, maxActiveHabits: settings.maxActiveHabits },
     habits: habits.map((h) => ({
       id: h.id,
       name: h.name,

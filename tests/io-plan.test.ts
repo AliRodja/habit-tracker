@@ -3,10 +3,11 @@ import { buildImportPlan, detectFormat, parseImportText, type ExistingState } fr
 import { exportFile, habit, record } from "./io-helpers";
 
 const today = "2026-10-23";
-const none: ExistingState = { habits: [], recordKeys: new Set() };
+const none: ExistingState = { habits: [], recordKeys: new Set(), maxActive: 5 };
 const local = (habits: { id: string; name: string; isActive?: boolean }[], keys: string[] = []): ExistingState => ({
   habits: habits.map((h) => ({ isActive: true, ...h })),
   recordKeys: new Set(keys),
+  maxActive: 5,
 });
 const json = (file: object) => JSON.stringify(file);
 const plan = (text: string, filename: string, existing: ExistingState, mode: "merge" | "replace" = "merge") =>
@@ -81,12 +82,28 @@ describe("JSON: aturan bisnis", () => {
     const six = ["a", "b", "c", "d", "e", "f"].map((id, i) => habit(id, id.toUpperCase(), { orderIndex: i }));
     const replace = plan(json(exportFile(six, [])), "x.json", none, "replace");
     expect(replace.canApply).toBe(false);
-    expect(replace.issues[0].message).toMatch(/6 habit aktif \(maksimal 5\).*nonaktif/);
+    expect(replace.issues[0].message).toMatch(/6 habit aktif \(batas 5\).*nonaktif/);
 
     // Pada mode Gabung, habit lokal ikut dihitung.
     const merge = plan(json(exportFile([habit("n1", "N1"), habit("n2", "N2")], [])), "x.json", local([1, 2, 3, 4].map((n) => ({ id: `l${n}`, name: `L${n}` }))));
     expect(merge.canApply).toBe(false);
-    expect(merge.issues[0].message).toMatch(/6 habit aktif.*mode Ganti/);
+    expect(merge.issues[0].message).toMatch(/6 habit aktif \(batas saat ini 5\).*mode Ganti/);
+  });
+
+  it("batas mengikuti Pengaturan: Gabung memakai batas lokal yang berlaku", () => {
+    const six = ["a", "b", "c", "d", "e", "f"].map((id, i) => habit(id, id.toUpperCase(), { orderIndex: i }));
+    expect(plan(json(exportFile(six, [])), "x.json", { ...none, maxActive: 6 }).canApply).toBe(true);
+    const tooMany = plan(json(exportFile(six, [])), "x.json", { ...none, maxActive: 4 });
+    expect(tooMany.issues[0].message).toMatch(/6 habit aktif \(batas saat ini 4\).*Naikkan batasnya di Pengaturan/);
+  });
+
+  it("mode Ganti dengan pengaturan di berkas memakai batas dari berkas", () => {
+    const six = ["a", "b", "c", "d", "e", "f"].map((id, i) => habit(id, id.toUpperCase(), { orderIndex: i }));
+    const withLimit = (maxActiveHabits?: string) => json(exportFile(six, [], { settings: maxActiveHabits ? { maxActiveHabits } : { theme: "dark" } }));
+    expect(plan(withLimit("6"), "x.json", none, "replace").canApply).toBe(true);
+    // Pengaturan di berkas tanpa maxActiveHabits mengembalikan batas ke bawaan 5, meski batas lokal 10.
+    expect(plan(withLimit(), "x.json", { ...none, maxActive: 10 }, "replace").canApply).toBe(false);
+    expect(plan(json(exportFile(six, [], { settings: { maxActiveHabits: "11" } })), "x.json", none, "replace").issues[0].message).toMatch(/maxActiveHabits harus angka 1–10/);
   });
 
   it("habit nonaktif tidak dihitung terhadap batas 5", () => {

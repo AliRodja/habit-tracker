@@ -14,7 +14,7 @@ export default defineConfig({
     // Database e2e dibuat ulang tepat sebelum server menyala, terpisah dari data/habits.db.
     command: `sh -c "rm -rf data/e2e.db* data/e2e-backups && prisma migrate deploy && next dev -H 127.0.0.1 -p ${PORT}"`,
     url: `http://127.0.0.1:${PORT}`,
-    env: { DATABASE_URL, BACKUP_DIR: "data/e2e-backups" },
+    env: { DATABASE_URL, BACKUP_DIR: "data/e2e-backups", NEXT_DIST_DIR: ".next-e2e" },
     reuseExistingServer: false,
     timeout: 120_000,
   },

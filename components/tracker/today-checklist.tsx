@@ -2,12 +2,41 @@
 
 import { Check, Flame } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
+import { Notice } from "@/components/ui/notice";
 import { setRecord } from "@/lib/actions/record-actions";
+import { formatDayLong, formatPercent } from "@/lib/format";
 import { colorDot } from "@/lib/habit-colors";
-import { formatPercent } from "@/lib/format";
 import type { TodayItem } from "@/lib/services/dashboard-service";
 
 type Checked = Record<string, boolean>;
+
+function encouragement(done: number, total: number): string {
+  if (done === 0) return "Mulai dari satu kebiasaan dulu. Sedikit tetap berarti.";
+  if (done < total) return `Bagus! Tinggal ${total - done} lagi untuk hari ini.`;
+  return "Sempurna! Semua kebiasaan hari ini sudah selesai. 🎉";
+}
+
+/** Lingkaran progres harian; angka persentase ditampilkan sebagai teks terpisah agar terbaca semua orang. */
+function ProgressRing({ ratio }: { ratio: number }) {
+  const r = 26;
+  const circumference = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 64 64" className="size-16 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" className="stroke-surface-2" />
+      <circle
+        cx="32"
+        cy="32"
+        r={r}
+        fill="none"
+        strokeWidth="7"
+        strokeLinecap="round"
+        className="stroke-accent transition-[stroke-dashoffset] duration-300"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - ratio)}
+      />
+    </svg>
+  );
+}
 
 export function TodayChecklist({ items, today }: { items: TodayItem[]; today: string }) {
   const serverChecked: Checked = Object.fromEntries(items.map((item) => [item.habit.id, item.checkedToday]));
@@ -36,26 +65,26 @@ export function TodayChecklist({ items, today }: { items: TodayItem[]; today: st
   }
 
   return (
-    <div>
-      <div className="mt-4 rounded-xl border border-border bg-surface p-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="font-medium">
+    <div className="grid gap-4">
+      <section aria-label="Ringkasan hari ini" className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm shadow-black/[0.02] sm:p-5">
+        <div className="relative">
+          <ProgressRing ratio={ratio ?? 0} />
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums">{formatPercent(ratio)}</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-muted">{formatDayLong(today)}</p>
+          <p className="text-lg font-semibold">
             {done} dari {items.length} selesai
           </p>
-          <p className="text-2xl font-semibold tabular-nums" aria-label={`Progres hari ini ${formatPercent(ratio)}`}>
-            {formatPercent(ratio)}
+          <p className="text-sm text-muted" aria-live="polite">
+            {encouragement(done, items.length)}
           </p>
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-border" aria-hidden>
-          <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${(ratio ?? 0) * 100}%` }} />
-        </div>
-      </div>
+      </section>
 
-      <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
-        {error}
-      </p>
+      <div role="alert">{error && <Notice tone="danger">{error}</Notice>}</div>
 
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {items.map((item) => {
           const id = item.habit.id;
           const isChecked = checked[id];
@@ -64,58 +93,64 @@ export function TodayChecklist({ items, today }: { items: TodayItem[]; today: st
           const formed = days >= item.milestoneTarget;
 
           return (
-            <li key={id} className="rounded-xl border border-border bg-surface p-4">
-              <div className="flex items-start gap-3">
-                <button
-                  type="button"
-                  onClick={() => toggle(id)}
-                  aria-pressed={isChecked}
-                  aria-label={`${item.habit.name}${item.habit.target ? `, target ${item.habit.target}` : ""}`}
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-lg border-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${
-                    isChecked ? `${colorDot(item.habit.color)} border-transparent text-white` : "border-border bg-background hover:border-muted"
+            <li key={id}>
+              <button
+                type="button"
+                onClick={() => toggle(id)}
+                aria-pressed={isChecked}
+                aria-describedby={`${id}-meta`}
+                className={`group flex h-full w-full items-start gap-4 rounded-2xl border p-4 text-left shadow-sm shadow-black/[0.02] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                  isChecked ? "border-success/40 bg-success-soft" : "border-border bg-surface hover:border-accent/50"
+                }`}
+              >
+                <span
+                  className={`flex size-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    isChecked ? `${colorDot(item.habit.color)} border-transparent text-white` : "border-border text-transparent group-hover:text-muted/60"
                   }`}
+                  aria-hidden
                 >
-                  {isChecked && <Check className="size-5" aria-hidden strokeWidth={3} />}
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{item.habit.name}</p>
-                  {item.habit.target && <p className="text-sm text-muted">{item.habit.target}</p>}
-                </div>
-                <p className="flex items-center gap-1 text-sm text-muted" title="Streak saat ini">
-                  <Flame className="size-4" aria-hidden />
-                  <span className="tabular-nums">{streak}</span>
-                  <span className="sr-only">hari berturut-turut</span>
-                </p>
-              </div>
+                  <Check className="size-6" strokeWidth={3} />
+                </span>
 
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs text-muted">
-                  <span>Menuju kebiasaan terbentuk</span>
-                  <span className="tabular-nums">
-                    {Math.min(days, item.milestoneTarget)} / {item.milestoneTarget} hari
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="font-semibold">{item.habit.name}</span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isChecked ? "bg-surface text-success" : "bg-surface-2 text-muted"}`}
+                      aria-hidden
+                    >
+                      {isChecked ? "Selesai" : "Belum"}
+                    </span>
                   </span>
-                </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-border" aria-hidden>
-                  <div
-                    className={`h-full rounded-full ${colorDot(item.habit.color)}`}
-                    style={{ width: `${Math.min(100, (days / item.milestoneTarget) * 100)}%` }}
-                  />
-                </div>
-                {formed && (
-                  <p className="mt-2 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    ✓ Terbentuk
-                  </p>
-                )}
-              </div>
+                  {item.habit.target && <span className="block text-sm text-muted">Target: {item.habit.target}</span>}
+
+                  <span id={`${id}-meta`} aria-hidden className="mt-3 block">
+                    <span className="flex items-center gap-1.5 text-sm">
+                      <Flame className={`size-4 ${streak > 0 ? "text-orange-500" : "text-muted"}`} aria-hidden />
+                      {streak > 0 ? `${streak} hari beruntun` : "Belum ada hari beruntun"}
+                    </span>
+                    <span className="mt-2 flex items-center justify-between text-xs text-muted">
+                      <span>Menuju kebiasaan terbentuk</span>
+                      <span className="tabular-nums">
+                        {Math.min(days, item.milestoneTarget)} / {item.milestoneTarget} hari
+                      </span>
+                    </span>
+                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-2">
+                      <span
+                        className={`block h-full rounded-full ${colorDot(item.habit.color)}`}
+                        style={{ width: `${Math.min(100, (days / item.milestoneTarget) * 100)}%` }}
+                      />
+                    </span>
+                    {formed && (
+                      <span className="mt-2 inline-flex rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-success">✓ Terbentuk</span>
+                    )}
+                  </span>
+                </span>
+              </button>
             </li>
           );
         })}
       </ul>
-
-      <p className="mt-6 text-xs text-muted">
-        Angka 66 hari adalah median dari penelitian Lally dkk. (2010); waktu tiap orang bisa berbeda (sekitar 18–254
-        hari). Melewatkan satu hari tidak menggagalkan proses, jadi yang dihitung adalah total hari tercentang.
-      </p>
     </div>
   );
 }

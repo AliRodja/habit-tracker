@@ -16,6 +16,7 @@ const activeNames = async () => (await habits.listActiveHabits()).map((h) => h.n
 beforeEach(async () => {
   await db.habitRecord.deleteMany();
   await db.habit.deleteMany();
+  await db.setting.deleteMany(); // pengaturan (mis. batas habit) dari file tes lain tidak boleh terbawa
 });
 
 describe("createHabit (FR-01)", () => {
@@ -73,6 +74,41 @@ describe("createHabit (FR-01)", () => {
       expect(!result.ok && result.fieldErrors?.[field], field).toBeTruthy();
     }
     expect(await db.habit.count()).toBe(0);
+  });
+});
+
+describe("batas habit aktif dari Pengaturan (FR-01, FR-20)", () => {
+  const setLimit = (value: string) => db.setting.upsert({ where: { key: "maxActiveHabits" }, create: { key: "maxActiveHabits", value }, update: { value } });
+
+  it("batas yang dinaikkan mengizinkan habit tambahan, lalu menolak di atasnya", async () => {
+    await setLimit("7");
+    for (const name of ["A", "B", "C", "D", "E", "F", "G"]) await create(name);
+    const result = await habits.createHabit({ ...valid, name: "H" }, today);
+    expect(!result.ok && result.message).toMatch(/Batas 7 habit aktif/);
+    expect(await db.habit.count()).toBe(7);
+  });
+
+  it("batas 1 hanya mengizinkan satu habit aktif", async () => {
+    await setLimit("1");
+    await create("A");
+    expect((await habits.createHabit({ ...valid, name: "B" }, today)).ok).toBe(false);
+  });
+
+  it("aktifkan kembali mengikuti batas yang berlaku", async () => {
+    await setLimit("2");
+    const old = await create("Lama");
+    await habits.archiveHabit(old.id, today);
+    await create("A");
+    await create("B");
+    expect((await habits.restoreHabit(old.id)).ok).toBe(false);
+    await setLimit("3");
+    expect((await habits.restoreHabit(old.id)).ok).toBe(true);
+  });
+
+  it("nilai pengaturan rusak jatuh ke bawaan 5", async () => {
+    await setLimit("tidak-valid");
+    for (const name of ["A", "B", "C", "D", "E"]) await create(name);
+    expect((await habits.createHabit({ ...valid, name: "F" }, today)).ok).toBe(false);
   });
 });
 

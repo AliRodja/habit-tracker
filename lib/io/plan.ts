@@ -1,4 +1,4 @@
-import { MAX_ACTIVE_HABITS } from "@/lib/constants";
+import { HABIT_LIMIT, parseHabitLimit } from "@/lib/constants";
 import type { DateString } from "@/lib/dates";
 import { parseCsvLong, type CsvRecordRow } from "./csv";
 import {
@@ -50,6 +50,8 @@ export interface ExistingState {
   habits: { id: string; name: string; isActive: boolean }[];
   /** Kunci `habitId|date` seluruh catatan lokal. */
   recordKeys: ReadonlySet<string>;
+  /** Batas habit aktif yang berlaku saat ini. */
+  maxActive: number;
 }
 
 export interface ImportCounts {
@@ -136,15 +138,19 @@ function planJson(plan: ImportPlan, file: ExportFile, existing: ExistingState, t
     activeByName.set(nameKey(h.name), id);
   }
 
+  // Mode Ganti dengan pengaturan di berkas ikut mengganti batasnya (kunci yang tidak ada kembali ke bawaan).
+  const fileHasSettings = mode === "replace" && file.settings !== undefined && Object.keys(file.settings).length > 0;
+  const limit = fileHasSettings ? parseHabitLimit(file.settings?.maxActiveHabits ?? String(HABIT_LIMIT.default)) : existing.maxActive;
+
   const activeAfter = [...finalHabits.values()].filter((h) => h.isActive).length;
-  if (activeAfter > MAX_ACTIVE_HABITS) {
+  if (activeAfter > limit) {
     issues.push({
       scope: "file",
       row: null,
       message:
         mode === "merge"
-          ? `Hasil impor akan memiliki ${activeAfter} habit aktif (maksimal ${MAX_ACTIVE_HABITS}). Nonaktifkan atau hapus habit lokal terlebih dahulu, tandai sebagian habit di berkas sebagai nonaktif, atau gunakan mode Ganti.`
-          : `Berkas memuat ${activeAfter} habit aktif (maksimal ${MAX_ACTIVE_HABITS}). Tandai sebagian habit di berkas sebagai nonaktif (isActive: false dan isi archivedAt).`,
+          ? `Hasil impor akan memiliki ${activeAfter} habit aktif (batas saat ini ${limit}). Naikkan batasnya di Pengaturan, arsipkan atau hapus habit lokal terlebih dahulu, tandai sebagian habit di berkas sebagai nonaktif, atau gunakan mode Ganti.`
+          : `Berkas memuat ${activeAfter} habit aktif (batas ${limit}). Tandai sebagian habit di berkas sebagai nonaktif (isActive: false dan isi archivedAt)${fileHasSettings ? ", atau naikkan maxActiveHabits pada pengaturan di berkas" : ", atau naikkan batasnya di Pengaturan"}.`,
     });
   }
 

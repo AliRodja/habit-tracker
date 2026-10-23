@@ -10,6 +10,7 @@ export async function updateSettings(_prev: FormState, formData: FormData): Prom
     timezone: String(formData.get("timezone") ?? ""),
     weekStartsOn: String(formData.get("weekStartsOn") ?? ""),
     theme: String(formData.get("theme") ?? ""),
+    maxActiveHabits: String(formData.get("maxActiveHabits") ?? ""),
   };
   const result = await saveSettings(values);
   if (!result.ok) return { status: "error", message: result.message, fieldErrors: result.fieldErrors, values };

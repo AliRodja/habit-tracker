@@ -253,15 +253,29 @@ describe("writeBackup", () => {
 });
 
 describe("updateSettings (FR-20)", () => {
+  const valid = { timezone: "Asia/Makassar", weekStartsOn: "0", theme: "dark", maxActiveHabits: "7" };
+
   it("menyimpan nilai yang valid", async () => {
-    expect(await updateSettings({ timezone: "Asia/Makassar", weekStartsOn: "0", theme: "dark" })).toEqual({ ok: true });
-    expect(await getSettings()).toEqual({ timezone: "Asia/Makassar", weekStartsOn: "0", theme: "dark" });
+    expect(await updateSettings(valid)).toEqual({ ok: true });
+    expect(await getSettings()).toEqual(valid);
   });
 
-  it("menolak zona waktu, awal minggu, dan tema tidak valid tanpa menyimpan apa pun", async () => {
-    const result = await updateSettings({ timezone: "Mars/Olympus", weekStartsOn: "3", theme: "neon" });
-    expect(result).toMatchObject({ ok: false, fieldErrors: { timezone: ["Zona waktu tidak valid"] } });
-    expect(!result.ok && Object.keys(result.fieldErrors ?? {}).sort()).toEqual(["theme", "timezone", "weekStartsOn"]);
+  it("menolak zona waktu, awal minggu, tema, dan batas habit tidak valid tanpa menyimpan apa pun", async () => {
+    const result = await updateSettings({ timezone: "Mars/Olympus", weekStartsOn: "3", theme: "neon", maxActiveHabits: "11" });
+    expect(result).toMatchObject({ ok: false, fieldErrors: { timezone: ["Zona waktu tidak valid"], maxActiveHabits: ["Pilih batas antara 1 dan 10"] } });
+    expect(!result.ok && Object.keys(result.fieldErrors ?? {}).sort()).toEqual(["maxActiveHabits", "theme", "timezone", "weekStartsOn"]);
     expect(await db.setting.count()).toBe(0);
+  });
+
+  it.each(["0", "abc", "2.5", ""])("menolak batas habit %j", async (maxActiveHabits) => {
+    expect((await updateSettings({ ...valid, maxActiveHabits })).ok).toBe(false);
+  });
+
+  it("menolak menurunkan batas di bawah jumlah habit aktif, dengan petunjuk jumlah yang perlu diarsipkan", async () => {
+    await seed(); // 2 habit aktif
+    const result = await updateSettings({ ...valid, maxActiveHabits: "1" });
+    expect(result).toMatchObject({ ok: false, fieldErrors: { maxActiveHabits: [expect.stringMatching(/ada 2 habit aktif\. Arsipkan 1 habit/)] } });
+    expect(await db.setting.count({ where: { key: "maxActiveHabits" } })).toBe(0); // tidak ada yang tersimpan sebagian
+    expect((await updateSettings({ ...valid, maxActiveHabits: "2" })).ok).toBe(true); // sama dengan jumlah aktif: boleh
   });
 });

@@ -92,7 +92,7 @@ test("NFR-04: umpan balik centang < 100 ms meski server lambat (optimistic)", as
   const elapsed = await page.evaluate(
     () =>
       new Promise<number>((resolve) => {
-        const button = document.querySelector<HTMLButtonElement>('button[aria-label^="Minum Air"]')!;
+        const button = [...document.querySelectorAll<HTMLButtonElement>("button[aria-pressed]")].find((b) => b.textContent?.includes("Minum Air"))!;
         const start = performance.now();
         new MutationObserver((_records, observer) => {
           observer.disconnect();

@@ -1,9 +1,10 @@
-import { Archive, ChevronDown, ChevronUp, Pencil } from "lucide-react";
-import type { Habit } from "@/lib/generated/prisma/client";
-import { archiveHabit, reorderHabits, updateHabit } from "@/lib/actions/habit-actions";
-import { colorDot } from "@/lib/habit-colors";
+import { Archive, ChevronDown, ChevronUp } from "lucide-react";
 import { btnIcon, btnSecondary } from "@/components/ui/styles";
-import { HabitForm } from "./habit-form";
+import { archiveHabit, reorderHabits, updateHabit } from "@/lib/actions/habit-actions";
+import { formatDateShort } from "@/lib/format";
+import type { Habit } from "@/lib/generated/prisma/client";
+import { colorDot } from "@/lib/habit-colors";
+import { EditHabitDialog } from "./habit-dialogs";
 
 interface Props {
   habit: Habit;
@@ -24,54 +25,40 @@ export function HabitCard({ habit, orderedIds, today }: Props) {
   const isLast = index === orderedIds.length - 1;
 
   return (
-    <li className="rounded-xl border border-border bg-surface p-4">
-      <div className="flex items-start gap-3">
+    <li className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm shadow-black/[0.02] sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
         <span className={`mt-1.5 size-3 shrink-0 rounded-full ${colorDot(habit.color)}`} aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{habit.name}</p>
-          {habit.target && <p className="text-sm text-muted">Target: {habit.target}</p>}
+        <div className="min-w-0">
+          <p className="font-semibold">{habit.name}</p>
+          <p className="text-sm text-muted">
+            {habit.target && <>Target: {habit.target} · </>}
+            Mulai {formatDateShort(habit.startDate)}
+          </p>
           {habit.description && <p className="mt-1 text-sm text-muted">{habit.description}</p>}
-          <p className="mt-1 text-xs text-muted">Mulai {habit.startDate}</p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <form action={reorderHabits.bind(null, isFirst ? orderedIds : swapped(orderedIds, index, index - 1))}>
-            <button type="submit" className={btnIcon} disabled={isFirst} aria-label={`Naikkan ${habit.name}`}>
-              <ChevronUp className="size-4" aria-hidden />
-            </button>
-          </form>
-          <form action={reorderHabits.bind(null, isLast ? orderedIds : swapped(orderedIds, index, index + 1))}>
-            <button type="submit" className={btnIcon} disabled={isLast} aria-label={`Turunkan ${habit.name}`}>
-              <ChevronDown className="size-4" aria-hidden />
-            </button>
-          </form>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-start gap-2">
-        <details className="group w-full order-last">
-          <summary className={`${btnSecondary} w-fit cursor-pointer list-none`}>
-            <Pencil className="size-4" aria-hidden /> Ubah
-          </summary>
-          <div className="mt-3 border-t border-border pt-4">
-            <HabitForm
-              idPrefix={`edit-${habit.id}`}
-              action={updateHabit.bind(null, habit.id)}
-              today={today}
-              submitLabel="Simpan perubahan"
-              defaults={{
-                name: habit.name,
-                target: habit.target ?? "",
-                description: habit.description ?? "",
-                color: habit.color,
-                startDate: habit.startDate,
-              }}
-            />
-          </div>
-        </details>
+      <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0">
+        <form action={reorderHabits.bind(null, isFirst ? orderedIds : swapped(orderedIds, index, index - 1))}>
+          <button type="submit" className={btnIcon} disabled={isFirst} aria-label={`Naikkan ${habit.name}`} title="Pindah ke atas">
+            <ChevronUp className="size-4" aria-hidden />
+          </button>
+        </form>
+        <form action={reorderHabits.bind(null, isLast ? orderedIds : swapped(orderedIds, index, index + 1))}>
+          <button type="submit" className={btnIcon} disabled={isLast} aria-label={`Turunkan ${habit.name}`} title="Pindah ke bawah">
+            <ChevronDown className="size-4" aria-hidden />
+          </button>
+        </form>
+        <EditHabitDialog
+          habitId={habit.id}
+          name={habit.name}
+          action={updateHabit.bind(null, habit.id)}
+          today={today}
+          defaults={{ name: habit.name, target: habit.target ?? "", description: habit.description ?? "", color: habit.color, startDate: habit.startDate }}
+        />
         <form action={archiveHabit.bind(null, habit.id)}>
-          <button type="submit" className={btnSecondary}>
-            <Archive className="size-4" aria-hidden /> Nonaktifkan
+          <button type="submit" className={btnSecondary} aria-label={`Arsipkan ${habit.name}`} title="Sembunyikan dari Hari Ini; riwayat tetap tersimpan">
+            <Archive className="size-4" aria-hidden /> Arsipkan
           </button>
         </form>
       </div>
