@@ -215,6 +215,27 @@ Keputusan yang melengkapi FR-18 sampai FR-20:
 8. **Tema** disimpan di database (sumber kebenaran) dan di-*cache* di `localStorage` agar terpasang sebelum halaman dicat. Pilihan "terang"/"gelap" menimpa pengaturan OS lewat atribut `data-theme`.
 9. **Keamanan Route Handler:** `Host` harus `localhost`/`127.0.0.1`/`[::1]` (menahan DNS rebinding), dan request yang mengubah data (`POST /api/import`) harus berasal dari origin yang sama (menahan CSRF dari situs lain di browser yang sama).
 
+### 4.6 Gamifikasi: Api Harian dan Hadiah
+
+Tujuannya menambah semangat harian tanpa menghukum, selaras dengan prinsip Fokus Konsistensi. Seluruh nilai dihitung dari riwayat centang (tanpa tabel tambahan), sehingga backfill, impor, dan ekspor otomatis konsisten. Riwayat habit di arsip ikut dihitung. Logika berada di modul murni `lib/gamification.ts`.
+
+**FR-21: Api Harian**
+1. Api **menyala** pada hari dengan minimal satu centang. Hari beruntun = jumlah hari menyala berturut-turut.
+2. Hari ini yang belum diisi tidak memadamkan api. Hari tanpa habit yang berjalan bersifat netral.
+3. **Pelindung Api:** setiap kelipatan 7 hari beruntun memberi 1 pelindung (maksimal 2 tersimpan). Hari terlewat memakai pelindung secara otomatis (api bertahan, tetapi tidak bertambah); tanpa pelindung, api padam. Ini mencerminkan temuan Lally bahwa melewatkan satu hari tidak menggagalkan proses.
+4. **Tingkatan api:** Padam (0), Percikan (1), Nyala (3), Kobaran (7), Membara (14), Api Unggun (30), Api Abadi (66 hari).
+
+**FR-22: XP, Level, dan Hadiah Instan**
+1. +10 XP per centang; +25 XP bonus untuk Hari Sempurna.
+2. Level n dicapai pada total XP 50·n·(n−1): 0, 100, 300, 600, 1000, …
+3. Saat mencentang di Hari Ini: "+XP" melayang dari kartu, pesan "Api menyala!" pada centang pertama hari itu, dan "Hari Sempurna!" saat semua selesai. Api, XP, dan level berubah seketika (*optimistic*). Animasi menghormati `prefers-reduced-motion`.
+
+**FR-23: Pencapaian**
+Halaman `/pencapaian` berisi 18 lencana dalam empat kelompok (langkah awal, api beruntun, konsistensi, kerja keras). Lencana terbuka menampilkan tanggal terbukanya; lencana terkunci menampilkan progres (mis. 708 / 1.000).
+
+**FR-24: Notifikasi Pencapaian Baru**
+Lencana yang baru terbuka diumumkan lewat notifikasi di Hari Ini. Daftar yang sudah dilihat disimpan di `localStorage`; kunjungan pertama hanya mencatat tanpa notifikasi agar pengguna lama tidak dibanjiri.
+
 ---
 
 ## 5. User Stories
@@ -228,6 +249,7 @@ Keputusan yang melengkapi FR-18 sampai FR-20:
 | US-05 | melihat laporan mingguan, bulanan, dan tahunan | memahami pola perilaku saya | FR-14–16 |
 | US-06 | menonaktifkan habit tanpa kehilangan riwayat | bisa mengganti fokus tanpa merusak statistik | FR-03 |
 | US-07 | mengekspor dan mengimpor data | memiliki cadangan dan bisa pindah komputer | FR-18, FR-19 |
+| US-08 | melihat api harian, XP, dan lencana bertambah setiap kali saya konsisten | makin semangat melakukan kebiasaan setiap hari | FR-21–FR-24 |
 
 ---
 
@@ -313,6 +335,7 @@ habit-tracker/
 │   ├── constants.ts              # batas habit, palet warna, nilai default pengaturan
 │   ├── dates.ts                  # util tanggal & zona waktu
 │   ├── reports.ts                # pembentuk laporan mingguan/bulanan/tahunan (fungsi murni)
+│   ├── gamification.ts           # api harian, pelindung, XP, level, pencapaian (fungsi murni)
 │   ├── generated/prisma/         # hasil `prisma generate` (di-.gitignore)
 │   ├── metrics/                  # eligibility, progress, streak, reports
 │   ├── services/                 # habitService, recordService, ioService
@@ -478,6 +501,10 @@ date,Minum Air,Olahraga,Membaca,Menulis Jurnal,Tidur Teratur,progress
 | TC-18 | Impor file rusak | Unggah JSON tidak valid | Pesan galat, data lama tidak berubah | FR-19 |
 | TC-19 | Mode Ganti | Impor mode Replace | Cadangan otomatis dibuat sebelum penggantian | FR-19 |
 | TC-20 | Keyboard | Navigasi grid dengan panah + Spasi | Sel berpindah dan tercentang | FR-07 |
+| TC-21 | Api menyala | 3 hari beruntun, lalu centang hari ini | Api naik menjadi 4 hari seketika, pesan "Api menyala!" | FR-21, FR-22 |
+| TC-22 | Pelindung api | 7 hari beruntun, terlewat 1 hari, lalu menyala lagi | Api tetap berlanjut, pelindung terpakai 1 | FR-21 |
+| TC-23 | Hari Sempurna | Centang semua habit hari ini | Pesan "Hari Sempurna!", bonus +25 XP | FR-22 |
+| TC-24 | Lencana baru | Capai 3 hari beruntun | Lencana "Api Menyala" terbuka dan notifikasi tampil sekali | FR-23, FR-24 |
 
 Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut nol, habit diarsipkan di tengah periode, pergantian tahun, dan tahun kabisat.
 
@@ -507,6 +534,10 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 | TC-18 | `io-service`, `io-plan`, `io-csv` | `settings.spec` |
 | TC-19 | `io-service` | `settings.spec` |
 | TC-20 | — | `tracking.spec` (keyboard) |
+| TC-21 | `gamification` | `gamification.spec` |
+| TC-22 | `gamification` (pelindung diperoleh, dipakai, batas maksimal) | — |
+| TC-23 | `gamification` (XP) | `gamification.spec` |
+| TC-24 | `gamification` (tanggal terbuka) | `gamification.spec` |
 
 ### 10.2 Hasil Verifikasi Persyaratan Non-Fungsional
 
@@ -536,6 +567,7 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 | 5. Laporan ✅ | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data ✅ | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
 | 7. Pemolesan ✅ | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
+| 8. Gamifikasi ✅ | FR-21 s.d. FR-24 | Api harian, XP, level, pencapaian |
 
 ---
 

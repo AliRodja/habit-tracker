@@ -1,12 +1,14 @@
 import { CalendarDays, HelpCircle, Sprout } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AchievementWatcher } from "@/components/gamification/achievement-watcher";
 import { TodayChecklist } from "@/components/tracker/today-checklist";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Loading } from "@/components/ui/loading";
 import { PageHeader } from "@/components/ui/page-header";
 import { btnPrimary } from "@/components/ui/styles";
 import { getTodayItems } from "@/lib/services/dashboard-service";
+import { getGamification } from "@/lib/services/gamification-service";
 import { getToday } from "@/lib/services/settings-service";
 
 export default function DashboardPage() {
@@ -22,7 +24,7 @@ export default function DashboardPage() {
 
 async function TodayContent() {
   const today = await getToday();
-  const items = await getTodayItems(today);
+  const [items, game] = await Promise.all([getTodayItems(today), getGamification(today)]);
 
   if (items.length === 0) {
     return (
@@ -41,7 +43,8 @@ async function TodayContent() {
 
   return (
     <div className="grid gap-6">
-      <TodayChecklist items={items} today={today} />
+      <TodayChecklist items={items} today={today} game={game} />
+      <AchievementWatcher unlocked={game.achievements.filter((a) => a.unlockedAt !== null).map((a) => ({ id: a.id, title: a.title }))} />
 
       <div className="grid gap-3 text-sm sm:grid-cols-2">
         <Link href="/tracker" className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 hover:border-accent/50">

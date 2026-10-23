@@ -31,10 +31,11 @@ Atau mode pengembangan: `npm run dev`.
 
 | Halaman | Fungsi |
 |---|---|
-| **Hari Ini** | Check-in satu klik, progres harian, streak, dan progres menuju 66 hari |
+| **Hari Ini** | Check-in satu klik, api harian, XP hari ini, streak, dan progres menuju 66 hari |
 | **Tracker** | Grid bulanan dan tahunan bergaya spreadsheet, isi ulang tanggal lalu, catatan harian, navigasi keyboard |
 | **Habit** | Tambah, ubah, urutkan, arsipkan, dan hapus permanen (batas habit aktif dapat diatur 1–10 di Pengaturan) |
 | **Laporan** | Mingguan, bulanan, dan tahunan dengan grafik dan heatmap konsistensi |
+| **Pencapaian** | Api harian (hari beruntun) dengan pelindung, XP dan level, serta 18 lencana |
 | **Pengaturan** | Zona waktu, batas habit aktif, awal minggu, tema, ekspor (JSON/CSV), impor, dan hapus semua data |
 
 ### Pintasan keyboard di Tracker
@@ -78,6 +79,7 @@ app/            halaman (App Router) dan Route Handler /api/export, /api/import
 components/     komponen UI per fitur (habits, tracker, reports, settings, layout)
 lib/metrics/    perhitungan metrik berupa fungsi murni (eligibility, progres, streak, tonggak 66 hari)
 lib/reports.ts  pembentuk laporan mingguan, bulanan, tahunan
+lib/gamification.ts  api harian, pelindung, XP, level, dan pencapaian
 lib/io/         skema, CSV, dan perencana impor
 lib/services/   logika bisnis dan akses database
 lib/actions/    Server Actions

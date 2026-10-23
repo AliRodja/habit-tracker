@@ -5,7 +5,7 @@ import { addArchivedHabit, addNote, checkDates, resetSettings, resetWithTwoHabit
 test.describe.configure({ mode: "serial" });
 
 const t = today();
-const ROUTES = ["/", "/tracker", "/tracker?view=year", "/habits", "/reports/weekly", "/reports/monthly", "/reports/yearly", "/settings"];
+const ROUTES = ["/", "/tracker", "/tracker?view=year", "/habits", "/reports/weekly", "/reports/monthly", "/reports/yearly", "/pencapaian", "/settings"];
 
 test.beforeEach(async () => {
   await resetWithTwoHabits();
