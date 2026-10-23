@@ -33,3 +33,62 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* Token grafik & heatmap: satu hue (biru) sekuensial, nilai terang dan gelap dipilih terpisah. */
+:root {
+  --chart-accent: #2a78d6;
+  --chart-soft: #86b6ef;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #6f6d68;
+  --chart-cursor: rgba(11, 11, 11, 0.05);
+  --chart-good: #006300;
+  --chart-critical: #d03b3b;
+  --hm-0: #e1e0d9;
+  --hm-1: #9ec5f4;
+  --hm-2: #5598e7;
+  --hm-3: #256abf;
+  --hm-4: #104281;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --chart-accent: #3987e5;
+    --chart-soft: #184f95;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --chart-muted: #a8a29e;
+    --chart-cursor: rgba(255, 255, 255, 0.06);
+    --chart-good: #0ca30c;
+    --hm-0: #2c2c2a;
+    --hm-1: #104281;
+    --hm-2: #256abf;
+    --hm-3: #5598e7;
+    --hm-4: #9ec5f4;
+  }
+}
+
+:root[data-theme="dark"] {
+  --chart-accent: #3987e5;
+  --chart-soft: #184f95;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+  --chart-muted: #a8a29e;
+  --chart-cursor: rgba(255, 255, 255, 0.06);
+  --chart-good: #0ca30c;
+  --hm-0: #2c2c2a;
+  --hm-1: #104281;
+  --hm-2: #256abf;
+  --hm-3: #5598e7;
+  --hm-4: #9ec5f4;
+}
+
+@media (forced-colors: active) {
+  /* Tanpa warna kustom, level heatmap dibedakan oleh ketebalan garis tepi. */
+  [data-heat] {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+  [data-heat="0"] { border-style: dotted; }
+  [data-heat="4"] { background: CanvasText !important; }
+}

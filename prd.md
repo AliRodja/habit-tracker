@@ -297,6 +297,7 @@ habit-tracker/
 │   ├── db.ts                     # Prisma client singleton (+ adapter better-sqlite3)
 │   ├── constants.ts              # batas habit, palet warna, nilai default pengaturan
 │   ├── dates.ts                  # util tanggal & zona waktu
+│   ├── reports.ts                # pembentuk laporan mingguan/bulanan/tahunan (fungsi murni)
 │   ├── generated/prisma/         # hasil `prisma generate` (di-.gitignore)
 │   ├── metrics/                  # eligibility, progress, streak, reports
 │   ├── services/                 # habitService, recordService, ioService
@@ -475,7 +476,7 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 | 2. Habit ✅ | FR-01 s.d. FR-05 | Halaman Habit lengkap dengan arsip |
 | 3. Pencatatan ✅ | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
 | 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
-| 5. Laporan | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
+| 5. Laporan ✅ | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
 | 7. Pemolesan | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
 

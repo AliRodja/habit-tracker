@@ -83,3 +83,8 @@ export function addMonths(year: number, month: number, delta: number): { year: n
   const index = year * 12 + (month - 1) + delta;
   return { year: Math.floor(index / 12), month: (index % 12) + 1 };
 }
+
+/** Tanggal awal minggu yang memuat `date`. weekStartsOn: 0 = Minggu, 1 = Senin. */
+export function startOfWeek(date: DateString, weekStartsOn: 0 | 1): DateString {
+  return shiftDate(date, -((dayOfWeek(date) - weekStartsOn + 7) % 7));
+}

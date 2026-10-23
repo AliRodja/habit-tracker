@@ -17,3 +17,9 @@ export const formatMonthName = (month: number) => monthOnly.format(at(`2026-${St
 export function formatPercent(ratio: number | null): string {
   return ratio === null ? "–" : `${Math.round(ratio * 100)}%`;
 }
+
+const dayMonth = fmt({ day: "numeric", month: "short" });
+export const formatDayMonth = (date: DateString) => dayMonth.format(at(date));
+
+/** Nama hari singkat dari nomor hari (0 = Minggu), mis. untuk sumbu grafik pola mingguan. */
+export const weekdayShortOf = (dow: number) => weekdayShort.format(at(`2026-10-${18 + dow}`));

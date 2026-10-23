@@ -45,3 +45,15 @@ export async function recordFor(habitName: string, date: string) {
     db.close();
   }
 }
+
+/** Centang `habitName` pada tanggal-tanggal tertentu (langsung ke database e2e). */
+export async function checkDates(habitName: string, dates: string[]) {
+  const db = open();
+  try {
+    const habit = db.prepare("SELECT id FROM Habit WHERE name = ?").get(habitName) as { id: string };
+    const insert = db.prepare("INSERT INTO HabitRecord (id, habitId, date, completed, updatedAt) VALUES (?, ?, ?, 1, ?)");
+    for (const date of dates) insert.run(randomUUID(), habit.id, date, now());
+  } finally {
+    db.close();
+  }
+}

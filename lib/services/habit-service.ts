@@ -124,3 +124,9 @@ export async function reorderHabits(orderedIds: string[]): Promise<ServiceResult
     return ok(undefined);
   });
 }
+
+/** Seluruh habit untuk laporan: aktif menurut urutan, lalu arsip menurut nama. */
+export async function listAllHabits(): Promise<Habit[]> {
+  const [active, archived] = await Promise.all([listActiveHabits(), listArchivedHabits()]);
+  return [...active, ...archived.sort((a, b) => a.name.localeCompare(b.name))];
+}
