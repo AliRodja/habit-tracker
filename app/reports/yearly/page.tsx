@@ -48,7 +48,7 @@ async function YearlyContent({ searchParams }: { searchParams: PageProps<"/repor
   }));
 
   return (
-    <div className="mt-4 grid gap-6">
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <YearSelect years={years} value={year} hrefs={Object.fromEntries(years.map((y) => [y, `/reports/yearly?y=${y}`]))} />
         {year === currentYear && <p className="text-sm text-muted">Dihitung sampai hari ini.</p>}

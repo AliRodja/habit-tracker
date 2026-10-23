@@ -50,7 +50,7 @@ async function WeeklyContent({ searchParams }: { searchParams: PageProps<"/repor
   }));
 
   return (
-    <div className="mt-4 grid gap-6">
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Periode" className="flex rounded-lg border border-border bg-surface p-0.5 text-sm">
           <Link href="/reports/weekly" aria-current={mode === "rolling" ? "page" : undefined} className={`rounded-md px-3 py-1 ${mode === "rolling" ? "bg-foreground text-background" : "text-muted"}`}>

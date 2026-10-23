@@ -1,4 +1,4 @@
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 // Prisma CLI tidak memuat .env otomatis; Next.js memuatnya sendiri saat runtime.
 try {
@@ -14,6 +14,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    // Default yang sama dengan lib/db.ts, sehingga clone baru dapat `npm install` tanpa berkas .env.
+    url: process.env.DATABASE_URL ?? "file:./data/habits.db",
   },
 });

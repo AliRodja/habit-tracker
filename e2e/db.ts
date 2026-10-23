@@ -67,3 +67,45 @@ export async function resetSettings() {
     db.close();
   }
 }
+
+export async function setStartDate(habitName: string, date: string) {
+  const db = open();
+  try {
+    db.prepare("UPDATE Habit SET startDate = ? WHERE name = ?").run(date, habitName);
+  } finally {
+    db.close();
+  }
+}
+
+/** Habit nonaktif beserta satu catatan lama, agar bagian Arsip dan laporan lama ikut terisi. */
+export async function addArchivedHabit(name: string) {
+  const db = open();
+  try {
+    const id = randomUUID();
+    db.prepare(
+      "INSERT INTO Habit (id, name, color, orderIndex, isActive, startDate, archivedAt, createdAt, updatedAt) VALUES (?, ?, 'rose', 9, 0, ?, ?, ?, ?)",
+    ).run(id, name, shiftDate(today(), -30), shiftDate(today(), -5), now(), now());
+    db.prepare("INSERT INTO HabitRecord (id, habitId, date, completed, updatedAt) VALUES (?, ?, ?, 1, ?)").run(randomUUID(), id, shiftDate(today(), -20), now());
+  } finally {
+    db.close();
+  }
+}
+
+export async function addNote(habitName: string, date: string, note: string) {
+  const db = open();
+  try {
+    const habit = db.prepare("SELECT id FROM Habit WHERE name = ?").get(habitName) as { id: string };
+    db.prepare("INSERT INTO HabitRecord (id, habitId, date, completed, note, updatedAt) VALUES (?, ?, ?, 0, ?, ?)").run(randomUUID(), habit.id, date, note, now());
+  } finally {
+    db.close();
+  }
+}
+
+export async function setSetting(key: string, value: string) {
+  const db = open();
+  try {
+    db.prepare("INSERT INTO Setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
+  } finally {
+    db.close();
+  }
+}

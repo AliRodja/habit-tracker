@@ -133,7 +133,7 @@ async function TrackerContent({ searchParams }: { searchParams: PageProps<"/trac
           />
         </div>
       ) : (
-        <div className="mt-4 grid gap-6 xl:grid-cols-2">
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
             const bounds = monthBounds(year, m);
             const rows = buildGridRows(habits, records.filter((r) => r.date >= bounds.from && r.date <= bounds.to), bounds.from, bounds.to, today);

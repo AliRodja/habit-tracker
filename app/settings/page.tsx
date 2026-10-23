@@ -43,7 +43,7 @@ async function SettingsContent() {
   const year = Number(todayIn(settings.timezone).slice(0, 4));
 
   return (
-    <div className="mt-6 grid gap-6">
+    <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6">
       <Card id="general-title" title="Umum">
         <SettingsForm timeZones={timeZones} defaults={settings} />
       </Card>

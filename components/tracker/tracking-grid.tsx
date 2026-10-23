@@ -153,7 +153,7 @@ export function TrackingGrid({ title, habits, rows, compact = false }: Props) {
                     className={`sticky left-0 whitespace-nowrap px-3 py-1 text-left font-normal ${row.isToday ? "bg-amber-100 dark:bg-stone-800" : "bg-surface"}`}
                   >
                     <span className="tabular-nums">{row.date.slice(8)}</span>{" "}
-                    <span className="text-muted">{formatWeekdayShort(row.date)}</span>
+                    <span className={row.isToday ? undefined : "text-muted"}>{formatWeekdayShort(row.date)}</span>
                     {row.isToday && <span className="ml-1.5 rounded bg-foreground px-1 py-0.5 text-[10px] font-semibold text-background">Hari ini</span>}
                   </th>
                   {row.cells.map((cell, c) => {

@@ -56,7 +56,7 @@ async function MonthlyContent({ searchParams }: { searchParams: PageProps<"/repo
   }));
 
   return (
-    <div className="mt-4 grid gap-6">
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <YearSelect years={years} value={year} hrefs={Object.fromEntries(years.map((y) => [y, href(y, y === year ? month : 1)]))} />
         <nav aria-label="Pilih bulan" className="flex flex-wrap gap-1">

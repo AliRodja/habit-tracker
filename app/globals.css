@@ -106,12 +106,43 @@ body {
   --hm-4: #9ec5f4;
 }
 
-@media (forced-colors: active) {
-  /* Tanpa warna kustom, level heatmap dibedakan oleh ketebalan garis tepi. */
+/*
+ * Tekstur heatmap sebagai kanal cadangan identitas (NFR-07): hanya untuk cetak dan forced-colors, tempat warna
+ * hilang atau tidak dapat diandalkan. Garis 45° makin rapat menandakan level makin tinggi; level 4 penuh.
+ */
+@media print, (forced-colors: active) {
   [data-heat] {
     forced-color-adjust: none;
+    print-color-adjust: exact;
     border: 1px solid CanvasText;
+    background-color: Canvas !important;
   }
-  [data-heat="0"] { border-style: dotted; }
-  [data-heat="4"] { background: CanvasText !important; }
+  [data-heat="0"] {
+    border-style: dotted;
+    background-image: none !important;
+  }
+  [data-heat="1"] {
+    background-image: repeating-linear-gradient(45deg, CanvasText 0 1px, transparent 1px 6px) !important;
+  }
+  [data-heat="2"] {
+    background-image: repeating-linear-gradient(45deg, CanvasText 0 1px, transparent 1px 4px) !important;
+  }
+  [data-heat="3"] {
+    background-image: repeating-linear-gradient(45deg, CanvasText 0 1.5px, transparent 1.5px 3px) !important;
+  }
+  [data-heat="4"] {
+    background-image: none !important;
+    background-color: CanvasText !important;
+  }
+}
+
+/* Hormati preferensi pengguna yang meminta gerak dikurangi (NFR-07). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

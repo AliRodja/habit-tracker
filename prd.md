@@ -4,7 +4,7 @@
 | Atribut | Nilai |
 |---|---|
 | Versi Dokumen | 2.1 (stack diperbarui ke versi terbaru per 23 Oktober 2026) |
-| Status | Siap dikembangkan (MVP) |
+| Status | MVP selesai (seluruh fase 1–7) |
 | Tanggal | 23 Oktober 2026 |
 | Penyusun | Ali Imran Rodja |
 | Tipe Aplikasi | Web, *local-first*, pengguna tunggal |
@@ -479,6 +479,48 @@ date,Minum Air,Olahraga,Membaca,Menulis Jurnal,Tidur Teratur,progress
 
 Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut nol, habit diarsipkan di tengah periode, pergantian tahun, dan tahun kabisat.
 
+### 10.1 Keterlacakan ke Pengujian Otomatis
+
+Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test dan test layanan dengan SQLite sungguhan (Vitest); `npm run test:e2e` menjalankan tes browser (Playwright) pada database terpisah.
+
+| ID | Unit / layanan (`tests/`) | End-to-end (`e2e/`) |
+|---|---|---|
+| TC-01 | `habit-service` | `habits.spec` |
+| TC-02 | `habit-service` | `habits.spec` |
+| TC-03 | `habit-service` | `habits.spec` |
+| TC-04 | `habit-service` | `habits.spec` |
+| TC-05 | `record-service`, `dashboard-service` | `tracking.spec` (dashboard) |
+| TC-06 | `record-service` | `tracking.spec` (grid backfill) |
+| TC-07 | `record-service` | `tracking.spec` (sel nonaktif) |
+| TC-08 | `metrics/eligibility-progress` | `tracking.spec` (progres baris) |
+| TC-09 | `metrics/eligibility-progress`, `grid` | — |
+| TC-10 | `habit-service`, `reports` | `habits.spec` |
+| TC-11 | `metrics/streak-milestone`, `dashboard-service` | — |
+| TC-12 | `metrics/streak-milestone`, `dashboard-service` | — |
+| TC-13 | `metrics/streak-milestone`, `dashboard-service` | `quality.spec` |
+| TC-14 | `metrics/reports`, `reports` | — |
+| TC-15 | `metrics/reports`, `reports`, `grid` | — |
+| TC-16 | — | `reports.spec` (tooltip heatmap) |
+| TC-17 | `io-service` (ekspor → Ganti → laporan identik) | — |
+| TC-18 | `io-service`, `io-plan`, `io-csv` | `settings.spec` |
+| TC-19 | `io-service` | `settings.spec` |
+| TC-20 | — | `tracking.spec` (keyboard) |
+
+### 10.2 Hasil Verifikasi Persyaratan Non-Fungsional
+
+| Kode | Hasil | Bukti |
+|---|---|---|
+| NFR-01 Privasi | **Lulus.** Nol request ke host selain `127.0.0.1` pada seluruh 8 halaman. Font di-*self-host* oleh `next/font`. | `e2e/quality.spec` |
+| NFR-02 Keamanan | **Lulus.** Alamat jaringan lokal menolak koneksi; `Host` asing dan POST lintas origin ditolak (403); input divalidasi Zod di server. | `e2e/quality.spec`, `e2e/settings.spec`, `tests/security` |
+| NFR-03 Kinerja muat | **Lulus.** Build produksi di localhost: halaman utama 0,2 dtk pada request pertama, halaman lain 17–50 ms, termasuk seluruh laporan dan Pengaturan (target < 1 dtk), dengan data seed setahun. | pengukuran `curl` |
+| NFR-04 Kinerja interaksi | **Lulus.** Umpan balik centang 8,8 ms dengan server yang sengaja ditahan 1,5 dtk (target < 100 ms); penyimpanan ke DB ±50 ms (target < 300 ms). | `e2e/quality.spec` |
+| NFR-05 Kinerja laporan | **Lulus.** Laporan tahunan + bulanan untuk 5 habit × 366 hari ±15 ms (target < 300 ms). | pengukuran Vitest |
+| NFR-06 Responsif | **Lulus.** Tanpa scroll horizontal halaman pada 1280, 768, dan 390 px di seluruh halaman; grid dan tabel dapat di-*scroll* di dalam kartunya. | `e2e/quality.spec` |
+| NFR-07 Aksesibilitas | **Lulus.** Nol pelanggaran WCAG 2.0/2.1 A dan AA (axe-core) pada 8 halaman dalam tema terang, gelap (OS), dan gelap pilihan pengguna. Seluruh centang dapat dioperasikan dengan keyboard dan punya label aksesibel; informasi tidak hanya lewat warna (ikon centang, teks delta, label sel); tautan "Lewati ke konten utama"; menghormati `prefers-reduced-motion`; tekstur heatmap untuk cetak dan `forced-colors`. | `e2e/quality.spec` |
+| NFR-08 Integritas data | **Lulus.** *Unique constraint* (habit, tanggal) dan impor transaksional (rollback teruji, tidak ada data berubah saat gagal). | `tests/record-service`, `tests/io-service` |
+| NFR-09 Keterpeliharaan | **Lulus.** TypeScript *strict*; logika metrik di modul murni `lib/metrics` dan `lib/reports.ts` dengan unit test. | `npm run typecheck`, `npm test` |
+
+
 ---
 
 ## 11. Tahapan Pengembangan (Milestones)
@@ -491,7 +533,7 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 | 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
 | 5. Laporan ✅ | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data ✅ | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
-| 7. Pemolesan | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
+| 7. Pemolesan ✅ | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
 
 ---
 

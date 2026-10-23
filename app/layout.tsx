@@ -39,11 +39,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense>
           <ThemeFromSettings />
         </Suspense>
-        <aside className="border-b border-border bg-surface p-3 md:min-h-screen md:w-56 md:shrink-0 md:border-r md:border-b-0 md:p-4">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-foreground focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-background"
+        >
+          Lewati ke konten utama
+        </a>
+        <aside className="border-b border-border bg-surface p-3 md:min-h-screen md:w-56 md:shrink-0 md:border-r md:border-b-0 md:p-4 print:hidden">
           <p className="mb-3 hidden px-3 text-sm font-semibold md:block">Habit Tracker</p>
           <MainNav />
         </aside>
-        <main className="mx-auto w-full max-w-5xl flex-1 p-4 md:p-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-5xl flex-1 p-4 outline-none md:p-8">{children}</main>
       </body>
     </html>
   );

@@ -27,7 +27,7 @@ async function HabitsContent() {
   const orderedIds = active.map((h) => h.id);
 
   return (
-    <div className="mt-6 grid gap-10">
+    <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-10">
       <section aria-labelledby="add-title">
         <h2 id="add-title" className="text-lg font-semibold">
           Tambah Habit
