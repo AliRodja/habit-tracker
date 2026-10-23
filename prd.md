@@ -3,7 +3,7 @@
 
 | Atribut | Nilai |
 |---|---|
-| Versi Dokumen | 2.0 |
+| Versi Dokumen | 2.1 (stack diperbarui ke versi terbaru per 23 Oktober 2026) |
 | Status | Siap dikembangkan (MVP) |
 | Tanggal | 23 Oktober 2026 |
 | Penyusun | Ali Imran Rodja |
@@ -238,17 +238,20 @@ Zona waktu (default `Asia/Jakarta`), hari awal minggu (default Senin), tema (ter
 
 | Lapisan | Teknologi | Peran |
 |---|---|---|
-| Framework | Next.js 15 (App Router) + TypeScript | UI, *Server Components*, *Server Actions*, *Route Handlers* |
-| Styling | Tailwind CSS | Desain responsif dan tema gelap |
-| Komponen UI | shadcn/ui (opsional) | Dialog, tombol, form, *tooltip* |
+| Framework | Next.js 16 (App Router, Cache Components, Turbopack) + React 19 | UI, *Server Components*, *Server Actions*, *Route Handlers* |
+| Bahasa | TypeScript 6.0 (*strict*) | Versi tertinggi yang didukung `typescript-eslint` 8.x (TypeScript 7 belum didukung linter) |
+| Styling | Tailwind CSS 4 | Desain responsif dan tema gelap |
+| Ikon | lucide-react | Ikon navigasi dan aksi |
+| Komponen UI | Komponen sendiri berbasis Tailwind (shadcn/ui opsional, ditambahkan bila diperlukan) | Dialog, tombol, form, *tooltip* |
 | Basis Data | SQLite | Penyimpanan lokal berbasis file |
-| ORM | Prisma | Skema, migrasi, *query* bertipe |
-| Validasi | Zod | Validasi form, Server Action, dan file impor |
-| Tanggal | date-fns (+ date-fns-tz) | Operasi tanggal dan zona waktu |
-| Grafik | Recharts | Grafik batang dan donat |
+| ORM | Prisma 7 (generator `prisma-client`, `prisma.config.ts`) + `@prisma/adapter-better-sqlite3` | Skema, migrasi, *query* bertipe. Prisma 7 mewajibkan *driver adapter*. Prisma 8 masih *release candidate*, sehingga belum dipakai |
+| Validasi | Zod 4 | Validasi form, Server Action, dan file impor |
+| Tanggal | date-fns 4 + `@date-fns/tz` | Operasi tanggal dan zona waktu (menggantikan `date-fns-tz`) |
+| Grafik | Recharts 3 | Grafik batang dan donat |
 | Heatmap | Komponen kustom (CSS Grid/SVG) | Heatmap tahunan |
-| CSV | Papa Parse | *Parsing* dan pembuatan CSV |
-| Pengujian | Vitest (unit) + Playwright (E2E, opsional) | Pengujian metrik dan alur utama |
+| CSV | Papa Parse 5 | *Parsing* dan pembuatan CSV |
+| Pengujian | Vitest 5 (unit) + Playwright (E2E, opsional) | Pengujian metrik dan alur utama |
+| Runtime | Node.js 24 LTS | Menyediakan `process.loadEnvFile` sehingga tidak perlu paket `dotenv` |
 
 ### 7.2 Arsitektur Tingkat Tinggi
 
@@ -265,7 +268,9 @@ Next.js Server (berjalan di 127.0.0.1)
 Prisma Client ──► SQLite (./data/habits.db)
 ```
 
-Aplikasi dijalankan dengan `npm run build` lalu `npm start` (terikat ke `127.0.0.1`). Perhitungan laporan dilakukan di server dengan mengambil catatan dalam rentang tanggal sekali *query*, kemudian diolah oleh fungsi murni di `lib/metrics` sehingga mudah diuji.
+Aplikasi dijalankan dengan `npm run build` lalu `npm start` (skrip menjalankan `next start -H 127.0.0.1`; `npm run dev` juga terikat ke `127.0.0.1`).
+
+Next.js 16 dikonfigurasi dengan **Cache Components**. Konsekuensinya, nilai yang bergantung pada waktu request ("Hari Ini") dan data DB harus dibaca di dalam `<Suspense>` dan setelah `await connection()` (dibungkus di `getToday()` pada `lib/services/settings-service.ts`). Dengan begitu cangkang halaman dirender statis sedangkan data di-*stream*. Perhitungan laporan dilakukan di server dengan mengambil catatan dalam rentang tanggal sekali *query*, kemudian diolah oleh fungsi murni di `lib/metrics` sehingga mudah diuji.
 
 ### 7.3 Struktur Folder
 
@@ -289,15 +294,21 @@ habit-tracker/
 │   ├── reports/                  # Heatmap, charts, StatCard
 │   └── habits/                   # HabitForm, HabitCard, StreakBadge
 ├── lib/
-│   ├── db.ts                     # Prisma client singleton
+│   ├── db.ts                     # Prisma client singleton (+ adapter better-sqlite3)
+│   ├── constants.ts              # batas habit, palet warna, nilai default pengaturan
 │   ├── dates.ts                  # util tanggal & zona waktu
+│   ├── generated/prisma/         # hasil `prisma generate` (di-.gitignore)
 │   ├── metrics/                  # eligibility, progress, streak, reports
 │   ├── services/                 # habitService, recordService, ioService
 │   ├── actions/                  # Server Actions
 │   └── validation/               # skema Zod
 ├── prisma/
 │   ├── schema.prisma
+│   ├── migrations/
 │   └── seed.ts                   # data contoh 1 tahun untuk uji
+├── prisma.config.ts              # lokasi skema, migrasi, seed, dan DATABASE_URL (Prisma 7)
+├── vitest.config.mts
+├── .env.example                  # contoh DATABASE_URL
 ├── data/                         # habits.db (masuk .gitignore)
 └── tests/
 ```
@@ -309,14 +320,15 @@ habit-tracker/
 Perubahan dibanding versi awal: atribut **Target Harian** dan **Status Aktif** yang disebut pada kebutuhan kini memiliki kolom; tanggal disimpan sebagai string `YYYY-MM-DD` untuk menghindari bug zona waktu (SQLite tidak memiliki tipe tanggal murni, dan `DateTime` akan menyimpan jam UTC sehingga tanggal dapat bergeser satu hari di WIB); ditambahkan `startDate`, `archivedAt`, `color`, `note`, indeks, serta tabel `Setting`.
 
 ```prisma
+// Prisma 7: URL basis data tidak lagi ditulis di schema.prisma, melainkan di prisma.config.ts
+// (DATABASE_URL="file:./data/habits.db"), dan koneksi runtime memakai driver adapter (lib/db.ts).
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL") // file:../data/habits.db
 }
 
-// Sesuaikan blok generator dengan versi Prisma yang terpasang.
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
 }
 
 model Habit {
@@ -457,10 +469,10 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 
 | Fase | Cakupan | Keluaran |
 |---|---|---|
-| 1. Fondasi | Inisialisasi Next.js, Tailwind, Prisma + SQLite, skema, *seed* data setahun, layout & navigasi | Aplikasi berjalan dengan data contoh |
+| 1. Fondasi ✅ | Inisialisasi Next.js, Tailwind, Prisma + SQLite, skema, *seed* data setahun, layout & navigasi | Aplikasi berjalan dengan data contoh |
 | 2. Habit | FR-01 s.d. FR-05 | Halaman Habit lengkap dengan arsip |
 | 3. Pencatatan | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
-| 4. Metrik | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
+| 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
 | 5. Laporan | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
 | 7. Pemolesan | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |

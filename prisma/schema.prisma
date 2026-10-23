@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Habit {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  target      String? // label target harian, mis. "8 gelas"
+  color       String        @default("emerald")
+  orderIndex  Int
+  isActive    Boolean       @default(true)
+  startDate   String // "YYYY-MM-DD"
+  archivedAt  String? // "YYYY-MM-DD", diisi saat dinonaktifkan
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  records     HabitRecord[]
+
+  @@index([isActive, orderIndex])
+}
+
+model HabitRecord {
+  id        String   @id @default(uuid())
+  habitId   String
+  date      String // "YYYY-MM-DD" menurut zona waktu pengguna
+  completed Boolean  @default(true)
+  note      String?
+  updatedAt DateTime @updatedAt
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([date])
+}
+
+model Setting {
+  key   String @id // "timezone" | "weekStartsOn" | "theme"
+  value String
+}
