@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HABIT_COLORS, HABIT_LIMIT, isHabitLimitValue, THEMES } from "@/lib/constants";
+import { GAMIFICATION_MODES, HABIT_COLORS, HABIT_LIMIT, isHabitLimitValue, THEMES } from "@/lib/constants";
 import { isDateString, isValidTimeZone } from "@/lib/dates";
 
 export const EXPORT_APP = "daily-habit-tracker";
@@ -46,6 +46,7 @@ const settingsSchema = z
     weekStartsOn: z.enum(["0", "1"], { error: 'weekStartsOn harus "0" (Minggu) atau "1" (Senin)' }),
     theme: z.enum(THEMES, { error: `theme harus salah satu dari: ${THEMES.join(", ")}` }),
     maxActiveHabits: z.string().refine(isHabitLimitValue, `maxActiveHabits harus angka ${HABIT_LIMIT.min}–${HABIT_LIMIT.max} dalam tanda kutip`),
+    gamification: z.enum(GAMIFICATION_MODES, { error: 'gamification harus "on" atau "off"' }),
   })
   .partial();
 

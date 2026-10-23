@@ -253,7 +253,7 @@ describe("writeBackup", () => {
 });
 
 describe("updateSettings (FR-20)", () => {
-  const valid = { timezone: "Asia/Makassar", weekStartsOn: "0", theme: "dark", maxActiveHabits: "7" };
+  const valid = { timezone: "Asia/Makassar", weekStartsOn: "0", theme: "dark", maxActiveHabits: "7", gamification: "off" };
 
   it("menyimpan nilai yang valid", async () => {
     expect(await updateSettings(valid)).toEqual({ ok: true });
@@ -261,9 +261,9 @@ describe("updateSettings (FR-20)", () => {
   });
 
   it("menolak zona waktu, awal minggu, tema, dan batas habit tidak valid tanpa menyimpan apa pun", async () => {
-    const result = await updateSettings({ timezone: "Mars/Olympus", weekStartsOn: "3", theme: "neon", maxActiveHabits: "11" });
+    const result = await updateSettings({ timezone: "Mars/Olympus", weekStartsOn: "3", theme: "neon", maxActiveHabits: "11", gamification: "mungkin" });
     expect(result).toMatchObject({ ok: false, fieldErrors: { timezone: ["Zona waktu tidak valid"], maxActiveHabits: ["Pilih batas antara 1 dan 10"] } });
-    expect(!result.ok && Object.keys(result.fieldErrors ?? {}).sort()).toEqual(["maxActiveHabits", "theme", "timezone", "weekStartsOn"]);
+    expect(!result.ok && Object.keys(result.fieldErrors ?? {}).sort()).toEqual(["gamification", "maxActiveHabits", "theme", "timezone", "weekStartsOn"]);
     expect(await db.setting.count()).toBe(0);
   });
 

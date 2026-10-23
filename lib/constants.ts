@@ -17,6 +17,7 @@ export const HABIT_COLORS = ["emerald", "sky", "violet", "amber", "rose", "teal"
 export type HabitColor = (typeof HABIT_COLORS)[number];
 
 export const THEMES = ["light", "dark", "system"] as const;
+export const GAMIFICATION_MODES = ["on", "off"] as const;
 export type Theme = (typeof THEMES)[number];
 
 export const SETTING_DEFAULTS = {
@@ -24,6 +25,8 @@ export const SETTING_DEFAULTS = {
   weekStartsOn: "1",
   theme: "system",
   maxActiveHabits: String(HABIT_LIMIT.default),
+  /** Api harian, XP, tantangan, dan pencapaian (FR-21–FR-27). */
+  gamification: "on",
 } as const;
 
 /** Kata yang harus diketik untuk menghapus seluruh data (FR-20 zona bahaya). */

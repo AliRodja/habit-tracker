@@ -4,12 +4,26 @@ import { Check, Flame, Shield, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { FlameBadge } from "@/components/gamification/flame-badge";
+import { WeeklyChallenges } from "@/components/gamification/weekly-challenges";
 import { Notice } from "@/components/ui/notice";
 import { setRecord } from "@/lib/actions/record-actions";
 import { formatDayLong, formatPercent } from "@/lib/format";
-import { dayXp, flameTier, levelFromXp, PERFECT_DAY_BONUS, SHIELD_MAX, XP_PER_CHECK, type GamificationSummary } from "@/lib/gamification";
+import {
+  CHALLENGE_BONUS,
+  challengeBonusToday,
+  challengeTitle,
+  dayXp,
+  flameTier,
+  levelFromXp,
+  liveChallenges,
+  PERFECT_DAY_BONUS,
+  SHIELD_MAX,
+  XP_PER_CHECK,
+  type LiveChallenge,
+} from "@/lib/gamification";
 import { colorDot } from "@/lib/habit-colors";
 import type { TodayItem } from "@/lib/services/dashboard-service";
+import type { GamificationView } from "@/lib/services/gamification-service";
 
 type Checked = Record<string, boolean>;
 
@@ -20,31 +34,62 @@ function encouragement(done: number, total: number): string {
 }
 
 /** Lingkaran progres harian; angka persentase ditampilkan sebagai teks terpisah agar terbaca semua orang. */
-function ProgressRing({ ratio }: { ratio: number }) {
+function ProgressRing({ ratio }: { ratio: number | null }) {
   const r = 26;
   const circumference = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 64 64" className="size-14 shrink-0 -rotate-90" aria-hidden>
-      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" className="stroke-surface-2" />
-      <circle
-        cx="32"
-        cy="32"
-        r={r}
-        fill="none"
-        strokeWidth="7"
-        strokeLinecap="round"
-        className="stroke-accent transition-[stroke-dashoffset] duration-300"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - ratio)}
-      />
-    </svg>
+    <div className="relative shrink-0">
+      <svg viewBox="0 0 64 64" className="size-14 -rotate-90" aria-hidden>
+        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" className="stroke-surface-2" />
+        <circle
+          cx="32"
+          cy="32"
+          r={r}
+          fill="none"
+          strokeWidth="7"
+          strokeLinecap="round"
+          className="stroke-accent transition-[stroke-dashoffset] duration-300"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - (ratio ?? 0))}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold tabular-nums">{formatPercent(ratio)}</span>
+    </div>
   );
+}
+
+function DayProgress({ done, total }: { done: number; total: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      <ProgressRing ratio={total === 0 ? null : done / total} />
+      <div className="min-w-0">
+        <p className="font-semibold">
+          {done} dari {total} selesai
+        </p>
+        <p className="text-xs text-muted">{encouragement(done, total)}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Status gamifikasi hari ini, dihitung dari centang optimistik agar berubah seketika. */
+function liveState(game: GamificationView, items: TodayItem[], checked: Checked) {
+  const done = items.filter((item) => checked[item.habit.id]).length;
+  const challenges = game.week
+    ? liveChallenges(game.week.challenges, {
+        lit: done > 0,
+        perfect: items.length > 0 && done === items.length,
+        checkedHabitIds: new Set(items.filter((item) => checked[item.habit.id]).map((item) => item.habit.id)),
+      })
+    : [];
+  const xpToday = dayXp(done, items.length) + challengeBonusToday(challenges);
+  return { done, challenges, xpToday, flame: done > 0 ? game.todayVariants.lit : game.todayVariants.unlit };
 }
 
 interface Props {
   items: TodayItem[];
   today: string;
-  game: GamificationSummary;
+  game: GamificationView;
 }
 
 export function TodayChecklist({ items, today, game }: Props) {
@@ -59,13 +104,8 @@ export function TodayChecklist({ items, today, game }: Props) {
   const [gain, setGain] = useState<{ id: string; xp: number; key: number } | null>(null);
   const [celebration, setCelebration] = useState<{ text: string; key: number } | null>(null);
 
-  const done = items.filter((item) => checked[item.habit.id]).length;
-  const ratio = items.length === 0 ? null : done / items.length;
-
-  // Api, XP, dan level dihitung dari status optimistik, sehingga berubah seketika saat mencentang.
-  const flame = done > 0 ? game.todayVariants.lit : game.todayVariants.unlit;
+  const { done, challenges, xpToday, flame } = liveState(game, items, checked);
   const tier = flameTier(flame.streak);
-  const xpToday = dayXp(done, items.length);
   const level = levelFromXp(game.xp.beforeToday + xpToday);
 
   useEffect(() => {
@@ -74,22 +114,28 @@ export function TodayChecklist({ items, today, game }: Props) {
     return () => clearTimeout(timer);
   }, [celebration]);
 
-  function toggle(id: string) {
-    const next = !checked[id];
-    if (next) {
-      const nextDone = done + 1;
-      const perfect = nextDone === items.length;
-      // `key` bertambah setiap kali agar animasi diputar ulang walau kartu yang sama dicentang lagi.
-      setGain((prev) => ({ id, xp: XP_PER_CHECK + (perfect ? PERFECT_DAY_BONUS : 0), key: (prev?.key ?? 0) + 1 }));
-      const text = perfect
+  function reward(id: string) {
+    const after = liveState(game, items, { ...checked, [id]: true });
+    const finished = after.challenges.filter((c) => c.completesToday && !challenges.find((b) => b.kind === c.kind)?.completesToday);
+    const perfect = after.done === items.length;
+    const xp = XP_PER_CHECK + (perfect ? PERFECT_DAY_BONUS : 0) + finished.length * CHALLENGE_BONUS;
+    // `key` bertambah setiap kali agar animasi diputar ulang walau kartu yang sama dicentang lagi.
+    setGain((prev) => ({ id, xp, key: (prev?.key ?? 0) + 1 }));
+
+    const text = finished.length
+      ? `🎯 Tantangan selesai: ${finished.map((c: LiveChallenge) => challengeTitle(c, c.habitId ? game.habitInfo[c.habitId]?.name : undefined)).join(", ")}! +${finished.length * CHALLENGE_BONUS} XP`
+      : perfect
         ? `🎉 Hari Sempurna! Bonus +${PERFECT_DAY_BONUS} XP`
         : done === 0
           ? `🔥 Api menyala! ${game.todayVariants.lit.streak} hari beruntun`
           : null;
-      if (text) setCelebration((prev) => ({ text, key: (prev?.key ?? 0) + 1 }));
-    } else {
-      setGain(null);
-    }
+    if (text) setCelebration((prev) => ({ text, key: (prev?.key ?? 0) + 1 }));
+  }
+
+  function toggle(id: string) {
+    const next = !checked[id];
+    if (game.enabled && next) reward(id);
+    else setGain(null);
 
     startTransition(async () => {
       setChecked({ id, value: next });
@@ -107,93 +153,89 @@ export function TodayChecklist({ items, today, game }: Props) {
 
   return (
     <div className="grid gap-4">
-      <section
-        aria-labelledby="api-title"
-        className={`rounded-2xl border p-4 shadow-sm shadow-black/[0.02] transition-colors sm:p-5 ${
-          flame.litToday ? "border-orange-300/60 bg-linear-to-br from-orange-50 to-surface dark:border-orange-500/30 dark:from-orange-500/10" : "border-border bg-surface"
-        }`}
-      >
-        <div className="flex items-center gap-4">
-          <FlameBadge streak={flame.streak} lit={flame.litToday} size="lg" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted">{formatDayLong(today)}</p>
-            <h2 id="api-title" className="text-xl font-bold tracking-tight sm:text-2xl">
-              {flame.streak > 0 ? `${flame.streak} hari beruntun` : "Api belum menyala"}
-            </h2>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold">Tingkat: {tier.name}</span>
-              <span className="text-muted">
-                {flame.litToday ? "Api hari ini sudah menyala." : "Centang satu kebiasaan agar api tetap menyala."}
-              </span>
-            </p>
-          </div>
-          <Link href="/pencapaian" className="hidden shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-accent-text hover:bg-accent-soft sm:flex">
-            <Trophy className="size-4" aria-hidden /> Pencapaian
-          </Link>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="flex items-center gap-3 rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
-            <div className="relative">
-              <ProgressRing ratio={ratio ?? 0} />
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold tabular-nums">{formatPercent(ratio)}</span>
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold">
-                {done} dari {items.length} selesai
+      {game.enabled ? (
+        <section
+          aria-labelledby="api-title"
+          className={`rounded-2xl border p-4 shadow-sm shadow-black/[0.02] transition-colors sm:p-5 ${
+            flame.litToday ? "border-orange-300/60 bg-linear-to-br from-orange-50 to-surface dark:border-orange-500/30 dark:from-orange-500/10" : "border-border bg-surface"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <FlameBadge streak={flame.streak} lit={flame.litToday} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-muted">{formatDayLong(today)}</p>
+              <h2 id="api-title" className="text-xl font-bold tracking-tight sm:text-2xl">
+                {flame.streak > 0 ? `${flame.streak} hari beruntun` : "Api belum menyala"}
+              </h2>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold">Tingkat: {tier.name}</span>
+                <span className="text-muted">{flame.litToday ? "Api hari ini sudah menyala." : "Centang satu kebiasaan agar api tetap menyala."}</span>
               </p>
-              <p className="text-xs text-muted">{encouragement(done, items.length)}</p>
             </div>
+            <Link href="/pencapaian" className="hidden shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-accent-text hover:bg-accent-soft sm:flex">
+              <Trophy className="size-4" aria-hidden /> Pencapaian
+            </Link>
           </div>
 
-          <div className="rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="font-semibold">Level {level.level}</p>
-              <p className="text-xs text-muted tabular-nums">+{xpToday} XP hari ini</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
+              <DayProgress done={done} total={items.length} />
             </div>
-            <div
-              className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2"
-              role="progressbar"
-              aria-label={`Menuju level ${level.level + 1}`}
-              aria-valuemin={0}
-              aria-valuemax={level.needed}
-              aria-valuenow={level.current}
-            >
-              <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${(level.current / level.needed) * 100}%` }} />
-            </div>
-            <p className="mt-1.5 text-xs text-muted tabular-nums">
-              {level.current} / {level.needed} XP menuju level {level.level + 1}
-            </p>
-          </div>
 
-          <div className="rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold">Pelindung api</p>
-              <span className="flex gap-1" aria-hidden>
-                {Array.from({ length: SHIELD_MAX }, (_, i) => (
-                  <Shield key={i} className={`size-4 ${i < flame.shields ? "fill-sky-500 text-sky-600" : "text-muted/50"}`} />
-                ))}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {flame.shields} dari {SHIELD_MAX} tersimpan. Menjaga api bila satu hari terlewat.
-            </p>
-            {tier.next && (
-              <p className="mt-1 text-xs font-medium">
-                {daysToNext} hari lagi menuju tingkat {tier.next.name}
+            <div className="rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-semibold">Level {level.level}</p>
+                <p className="text-xs text-muted tabular-nums">+{xpToday} XP hari ini</p>
+              </div>
+              <div
+                className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2"
+                role="progressbar"
+                aria-label={`Menuju level ${level.level + 1}`}
+                aria-valuemin={0}
+                aria-valuemax={level.needed}
+                aria-valuenow={level.current}
+              >
+                <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${(level.current / level.needed) * 100}%` }} />
+              </div>
+              <p className="mt-1.5 text-xs text-muted tabular-nums">
+                {level.current} / {level.needed} XP menuju level {level.level + 1}
               </p>
+            </div>
+
+            <div className="rounded-xl bg-surface/70 p-3 dark:bg-surface-2/50">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold">Pelindung api</p>
+                <span className="flex gap-1" aria-hidden>
+                  {Array.from({ length: SHIELD_MAX }, (_, i) => (
+                    <Shield key={i} className={`size-4 ${i < flame.shields ? "fill-sky-500 text-sky-600" : "text-muted/50"}`} />
+                  ))}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {flame.shields} dari {SHIELD_MAX} tersimpan. Menjaga api bila satu hari terlewat.
+              </p>
+              {tier.next && (
+                <p className="mt-1 text-xs font-medium">
+                  {daysToNext} hari lagi menuju tingkat {tier.next.name}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <p role="status" aria-live="polite">
+            {celebration && (
+              <span key={celebration.key} className="mt-3 flex w-fit animate-[pop-in_0.25s_ease-out] items-center gap-2 rounded-full bg-foreground px-3.5 py-1.5 text-sm font-semibold text-background">
+                {celebration.text}
+              </span>
             )}
-          </div>
-        </div>
-
-        <p role="status" aria-live="polite" className="min-h-0">
-          {celebration && (
-            <span key={celebration.key} className="mt-3 flex w-fit animate-[pop-in_0.25s_ease-out] items-center gap-2 rounded-full bg-foreground px-3.5 py-1.5 text-sm font-semibold text-background">
-              {celebration.text}
-            </span>
-          )}
-        </p>
-      </section>
+          </p>
+        </section>
+      ) : (
+        <section aria-label="Ringkasan hari ini" className="rounded-2xl border border-border bg-surface p-4 shadow-sm shadow-black/[0.02] sm:p-5">
+          <p className="mb-3 text-sm text-muted">{formatDayLong(today)}</p>
+          <DayProgress done={done} total={items.length} />
+        </section>
+      )}
 
       <div role="alert">{error && <Notice tone="danger">{error}</Notice>}</div>
 
@@ -272,6 +314,10 @@ export function TodayChecklist({ items, today, game }: Props) {
           );
         })}
       </ul>
+
+      {game.enabled && game.week && challenges.length > 0 && (
+        <WeeklyChallenges challenges={challenges} end={game.week.end} today={today} habitInfo={game.habitInfo} />
+      )}
     </div>
   );
 }

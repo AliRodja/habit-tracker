@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dateRange, shiftDate } from "@/lib/dates";
-import { computeGamification, dayXp, flameTier, levelFromXp, stepFlame, xpForLevel } from "@/lib/gamification";
+import { challengeBonusToday, computeGamification, dayXp, flameTier, levelFromXp, liveChallenges, stepFlame, xpForLevel, type WeeklyChallenge } from "@/lib/gamification";
 import { checkRange, checks, habit, indexOf } from "./metrics/helpers";
 
 const T = "2026-10-23";
@@ -115,8 +115,9 @@ describe("computeGamification", () => {
     const g = computeGamification([habit("a", d(-70))], indexOf(checks("a", days)), T);
     expect(achievement(g, "formed-1").unlockedAt).toBe(d(-5));
     expect(achievement(g, "flame-66").unlockedAt).toBe(d(-5));
-    // 35 XP per hari sempurna → level 5 (1000 XP) pada hari ke-29
-    expect(achievement(g, "level-5").unlockedAt).toBe(days[28]);
+    // 35 XP per hari sempurna + 50 XP per tantangan mingguan yang selesai → 1000 XP tercapai pada hari ke-17
+    // (dihitung terpisah: 30 Agu 2026, 1.045 XP; tanpa bonus tantangan baru tercapai 11 Sep).
+    expect(achievement(g, "level-5").unlockedAt).toBe(days[16]);
   });
 
   it("riwayat habit yang diarsipkan tetap dihitung", () => {
@@ -130,5 +131,109 @@ describe("computeGamification", () => {
     expect(g.flame).toEqual({ streak: 0, longest: 0, shields: 0, shieldsUsed: 0, litToday: false });
     expect(g.xp.total).toBe(0);
     expect(g.achievements.every((a) => a.unlockedAt === null)).toBe(true);
+  });
+});
+
+describe("tantangan mingguan (FR-25)", () => {
+  // T = Jumat 23 Okt 2026; minggu Senin 19 – Minggu 25 Okt.
+  const challenge = (g: ReturnType<typeof computeGamification>, kind: string) => g.week!.challenges.find((c) => c.kind === kind)!;
+
+  it("menyusun tiga tantangan untuk minggu berjalan", () => {
+    const g = computeGamification([habit("a", "2026-10-01")], indexOf(), T);
+    expect(g.week).toMatchObject({ start: "2026-10-19", end: "2026-10-25" });
+    expect(g.week!.challenges.map((c) => [c.kind, c.target])).toEqual([
+      ["active", 7],
+      ["perfect", 3],
+      ["focus", 5],
+    ]);
+  });
+
+  it("awal minggu mengikuti Pengaturan", () => {
+    const g = computeGamification([habit("a", "2026-10-01")], indexOf(), T, { weekStartsOn: 0 });
+    expect(g.week).toMatchObject({ start: "2026-10-18", end: "2026-10-24" });
+  });
+
+  it("habit fokus = habit paling tertinggal minggu lalu", () => {
+    const habits = [habit("rajin", "2026-10-01"), habit("tertinggal", "2026-10-01")];
+    const index = indexOf(checkRange("rajin", "2026-10-12", "2026-10-18"), checks("tertinggal", ["2026-10-12"]));
+    expect(challenge(computeGamification(habits, index, T), "focus").habitId).toBe("tertinggal");
+  });
+
+  it("target dipotong pada minggu pertama riwayat dan menurut hari eligible habit fokus", () => {
+    const g = computeGamification([habit("a", "2026-10-22")], indexOf(), T); // mulai Kamis
+    expect(g.week!.challenges.map((c) => [c.kind, c.target])).toEqual([
+      ["active", 4],
+      ["perfect", 3],
+      ["focus", 4],
+    ]);
+  });
+
+  it("progres, tanggal selesai, dan bonus XP dihitung pada hari tantangan selesai", () => {
+    // Senin–Kamis sempurna (1 habit) → "3 Hari Sempurna" selesai Rabu 21 Okt.
+    const g = computeGamification([habit("a", "2026-10-01")], indexOf(checkRange("a", "2026-10-19", "2026-10-22")), T);
+    expect(challenge(g, "perfect")).toMatchObject({ progress: 3, progressBeforeToday: 3, completedAt: "2026-10-21" });
+    expect(challenge(g, "active")).toMatchObject({ progress: 4, completedAt: null });
+    expect(g.stats.completedChallenges).toBeGreaterThanOrEqual(1);
+    expect(achievement(g, "challenge-1").unlockedAt).not.toBeNull();
+  });
+
+  it("progressBeforeToday tidak menyertakan hari ini (untuk tampilan optimistik)", () => {
+    const g = computeGamification([habit("a", "2026-10-19")], indexOf(checkRange("a", "2026-10-19", "2026-10-23")), T);
+    expect(challenge(g, "active")).toMatchObject({ progress: 5, progressBeforeToday: 4 });
+    // Fokus 5 hari selesai tepat hari ini: bonusnya masuk XP hari ini, bukan sebelum hari ini.
+    expect(challenge(g, "focus").completedAt).toBe(T);
+    expect(g.xp.today).toBe(35 + 50);
+  });
+
+  it("tanpa habit: tidak ada tantangan", () => {
+    expect(computeGamification([], indexOf(), T).week).toBeNull();
+  });
+});
+
+describe("lencana per habit (FR-26)", () => {
+  it("Perunggu 7, Perak 21, Emas 66, Berlian 100 hari tercentang, dengan tanggal diraih", () => {
+    const days = dateRange(d(-24), d(-1)); // 24 hari
+    const g = computeGamification([habit("a", d(-24)), habit("b", d(-24))], indexOf(checks("a", days), checks("b", days.slice(0, 5))), T);
+    const [a, b] = g.habitBadges;
+    expect(a).toMatchObject({ habitId: "a", completedDays: 24, next: { name: "Emas", days: 66 } });
+    expect(a.earned).toEqual([
+      { name: "Perunggu", days: 7, date: days[6] },
+      { name: "Perak", days: 21, date: days[20] },
+    ]);
+    expect(b).toMatchObject({ completedDays: 5, earned: [], next: { name: "Perunggu", days: 7 } });
+  });
+});
+
+describe("liveChallenges (tampilan optimistik)", () => {
+  const ch = (kind: WeeklyChallenge["kind"], target: number, before: number, habitId?: string): WeeklyChallenge => ({
+    kind,
+    target,
+    habitId,
+    progress: before,
+    progressBeforeToday: before,
+    completedAt: before >= target ? "2026-10-20" : null,
+  });
+  const challenges = [ch("active", 7, 6), ch("perfect", 3, 2), ch("focus", 5, 4, "f")];
+
+  it("menambahkan kontribusi hari ini dan menandai tantangan yang selesai berkat hari ini", () => {
+    const live = liveChallenges(challenges, { lit: true, perfect: false, checkedHabitIds: new Set(["f"]) });
+    expect(live.map((c) => [c.kind, c.progress, c.done, c.completesToday])).toEqual([
+      ["active", 7, true, true],
+      ["perfect", 2, false, false],
+      ["focus", 5, true, true],
+    ]);
+    expect(challengeBonusToday(live)).toBe(100);
+  });
+
+  it("tanpa centang hari ini progres tetap seperti sebelum hari ini", () => {
+    const live = liveChallenges(challenges, { lit: false, perfect: false, checkedHabitIds: new Set() });
+    expect(live.map((c) => c.progress)).toEqual([6, 2, 4]);
+    expect(challengeBonusToday(live)).toBe(0);
+  });
+
+  it("tantangan yang sudah selesai sebelum hari ini tidak memberi bonus lagi dan tidak melewati target", () => {
+    const live = liveChallenges([ch("perfect", 3, 3)], { lit: true, perfect: true, checkedHabitIds: new Set() });
+    expect(live[0]).toMatchObject({ progress: 3, done: true, completesToday: false });
+    expect(challengeBonusToday(live)).toBe(0);
   });
 });

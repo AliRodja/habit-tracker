@@ -3,10 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Lock, Sprout } from "lucide-react";
 import { Suspense } from "react";
 import { MainNav } from "@/components/layout/main-nav";
-import { ThemeSync } from "@/components/layout/theme-sync";
+import { PreferencesSync } from "@/components/layout/preferences-sync";
 import type { Theme } from "@/lib/constants";
 import { getSettings } from "@/lib/services/settings-store";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { PREFERENCES_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,21 +24,21 @@ export const metadata: Metadata = {
   description: "Pelacak kebiasaan harian lokal dengan analitik otomatis.",
 };
 
-async function ThemeFromSettings() {
-  const { theme } = await getSettings();
-  return <ThemeSync theme={theme as Theme} />;
+async function PreferencesFromSettings() {
+  const { theme, gamification } = await getSettings();
+  return <PreferencesSync theme={theme as Theme} gamification={gamification !== "off"} />;
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // suppressHydrationWarning: skrip tema di <head> memasang data-theme sebelum React hydrate.
+    // suppressHydrationWarning: skrip di <head> memasang data-theme/data-gamification sebelum React hydrate.
     <html lang="id" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full md:flex">
         <Suspense>
-          <ThemeFromSettings />
+          <PreferencesFromSettings />
         </Suspense>
         <a
           href="#main-content"

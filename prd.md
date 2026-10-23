@@ -198,7 +198,7 @@ Data disimpan pada satu file SQLite (default `./data/habits.db`) melalui Prisma 
 6. Impor yang menghasilkan habit aktif melebihi batas ditolak dengan pesan yang menjelaskan cara menyesuaikannya. Mode Gabung memakai batas lokal yang berlaku; mode Ganti dengan pengaturan di berkas memakai batas dari berkas.
 
 **FR-20 — Pengaturan**
-Zona waktu (default `Asia/Jakarta`), **batas habit aktif** (default 5, pilihan 1–10), hari awal minggu (default Senin), tema (terang/gelap/sistem), serta zona bahaya "Hapus Semua Data" dengan konfirmasi ketik.
+Zona waktu (default `Asia/Jakarta`), **batas habit aktif** (default 5, pilihan 1–10), hari awal minggu (default Senin), **gamifikasi** (aktif/nonaktif, FR-27), tema (terang/gelap/sistem), serta zona bahaya "Hapus Semua Data" dengan konfirmasi ketik.
 
 Batas habit aktif tidak dapat diturunkan di bawah jumlah habit aktif saat ini; pengguna diminta mengarsipkan sebagian habit terlebih dahulu (tidak ada pengarsipan otomatis, agar tidak ada habit yang hilang dari Hari Ini tanpa disadari).
 
@@ -226,15 +226,29 @@ Tujuannya menambah semangat harian tanpa menghukum, selaras dengan prinsip Fokus
 4. **Tingkatan api:** Padam (0), Percikan (1), Nyala (3), Kobaran (7), Membara (14), Api Unggun (30), Api Abadi (66 hari).
 
 **FR-22: XP, Level, dan Hadiah Instan**
-1. +10 XP per centang; +25 XP bonus untuk Hari Sempurna.
+1. +10 XP per centang; +25 XP bonus untuk Hari Sempurna; +50 XP untuk setiap tantangan mingguan yang selesai (FR-25).
 2. Level n dicapai pada total XP 50·n·(n−1): 0, 100, 300, 600, 1000, …
 3. Saat mencentang di Hari Ini: "+XP" melayang dari kartu, pesan "Api menyala!" pada centang pertama hari itu, dan "Hari Sempurna!" saat semua selesai. Api, XP, dan level berubah seketika (*optimistic*). Animasi menghormati `prefers-reduced-motion`.
 
 **FR-23: Pencapaian**
-Halaman `/pencapaian` berisi 18 lencana dalam empat kelompok (langkah awal, api beruntun, konsistensi, kerja keras). Lencana terbuka menampilkan tanggal terbukanya; lencana terkunci menampilkan progres (mis. 708 / 1.000).
+Halaman `/pencapaian` berisi 20 lencana dalam empat kelompok (langkah awal, api beruntun, konsistensi, kerja keras). Lencana terbuka menampilkan tanggal terbukanya; lencana terkunci menampilkan progres (mis. 708 / 1.000).
 
 **FR-24: Notifikasi Pencapaian Baru**
 Lencana yang baru terbuka diumumkan lewat notifikasi di Hari Ini. Daftar yang sudah dilihat disimpan di `localStorage`; kunjungan pertama hanya mencatat tanpa notifikasi agar pengguna lama tidak dibanjiri.
+
+**FR-25: Tantangan Mingguan**
+Setiap minggu kalender (mengikuti awal minggu di Pengaturan) tersedia tiga tantangan, masing-masing bernilai +50 XP pada hari tantangan selesai:
+1. *Nyalakan api N hari*: api menyala setiap hari yang memiliki habit berjalan (biasanya 7).
+2. *3 Hari Sempurna* minggu ini (dipotong bila minggu pertama riwayat lebih pendek).
+3. *Fokus [habit]: 5 hari*: habit dengan tingkat penyelesaian terendah pada minggu sebelumnya (seri → urutan habit; tanpa data minggu lalu → habit pertama). Target dipotong menurut hari eligible habit itu.
+
+Tantangan berlaku juga untuk minggu-minggu lalu, sehingga bonusnya ikut terhitung dalam total XP. Progres tantangan di Hari Ini berubah seketika saat mencentang. Lencana tambahan: *Tantangan Pertama* dan *Penakluk Tantangan* (10 tantangan).
+
+**FR-26: Medali per Habit**
+Setiap habit mengumpulkan medali dari total hari tercentangnya (sama dengan hitungan tonggak FR-13): Perunggu (7), Perak (21), Emas (66, kebiasaan terbentuk), Berlian (100), beserta tanggal diraih dan progres ke medali berikutnya.
+
+**FR-27: Saklar Gamifikasi**
+Pengaturan "Gamifikasi" (Aktif/Nonaktif, bawaan Aktif). Saat nonaktif, Hari Ini menampilkan ringkasan tenang tanpa api, XP, tantangan, perayaan, dan notifikasi, serta menu Pencapaian disembunyikan. Halaman Pencapaian tetap dapat dibuka dengan pemberitahuan. Progres tetap dihitung karena semuanya diturunkan dari riwayat. Streak per habit (FR-12) dan tonggak 66 hari (FR-13) tetap tampil karena merupakan fitur inti.
 
 ---
 
@@ -250,6 +264,8 @@ Lencana yang baru terbuka diumumkan lewat notifikasi di Hari Ini. Daftar yang su
 | US-06 | menonaktifkan habit tanpa kehilangan riwayat | bisa mengganti fokus tanpa merusak statistik | FR-03 |
 | US-07 | mengekspor dan mengimpor data | memiliki cadangan dan bisa pindah komputer | FR-18, FR-19 |
 | US-08 | melihat api harian, XP, dan lencana bertambah setiap kali saya konsisten | makin semangat melakukan kebiasaan setiap hari | FR-21–FR-24 |
+| US-09 | mendapat tantangan mingguan yang menyorot habit yang sedang tertinggal | punya target jangka pendek yang jelas | FR-25 |
+| US-10 | mematikan gamifikasi | tampilan tetap tenang bila saya tidak membutuhkannya | FR-27 |
 
 ---
 
@@ -403,7 +419,7 @@ model HabitRecord {
 }
 
 model Setting {
-  key   String @id   // "timezone" | "weekStartsOn" | "theme" | "maxActiveHabits"
+  key   String @id   // "timezone" | "weekStartsOn" | "theme" | "maxActiveHabits" | "gamification"
   value String
 }
 ```
@@ -429,7 +445,7 @@ Aturan data:
 | `reorderHabits` | daftar id terurut | Memperbarui `orderIndex` dalam satu transaksi |
 | `setRecord` | habitId, date, completed | Tolak tanggal masa depan atau di luar rentang eligible |
 | `setRecordNote` | habitId, date, note | Maks. 200 karakter |
-| `updateSettings` | timezone, weekStartsOn, theme, maxActiveHabits | Validasi nilai yang diizinkan; batas tidak boleh di bawah jumlah habit aktif |
+| `updateSettings` | timezone, weekStartsOn, theme, maxActiveHabits, gamification | Validasi nilai yang diizinkan; batas tidak boleh di bawah jumlah habit aktif |
 | `resetAllData` | confirmText = "HAPUS" | Membuat cadangan otomatis sebelum menghapus |
 
 ### 9.2 Route Handlers
@@ -505,6 +521,9 @@ date,Minum Air,Olahraga,Membaca,Menulis Jurnal,Tidur Teratur,progress
 | TC-22 | Pelindung api | 7 hari beruntun, terlewat 1 hari, lalu menyala lagi | Api tetap berlanjut, pelindung terpakai 1 | FR-21 |
 | TC-23 | Hari Sempurna | Centang semua habit hari ini | Pesan "Hari Sempurna!", bonus +25 XP | FR-22 |
 | TC-24 | Lencana baru | Capai 3 hari beruntun | Lencana "Api Menyala" terbuka dan notifikasi tampil sekali | FR-23, FR-24 |
+| TC-25 | Tantangan mingguan | 2 Hari Sempurna minggu ini, lalu selesaikan semua habit hari ini | "3 Hari Sempurna" selesai, pesan perayaan, +50 XP masuk XP hari ini | FR-25 |
+| TC-26 | Medali per habit | 7 hari tercentang | Medali Perunggu diraih, "14 hari lagi menuju medali Perak" | FR-26 |
+| TC-27 | Gamifikasi nonaktif | Pilih Nonaktif di Pengaturan | Ringkasan tenang di Hari Ini, menu Pencapaian tersembunyi | FR-27 |
 
 Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut nol, habit diarsipkan di tengah periode, pergantian tahun, dan tahun kabisat.
 
@@ -538,6 +557,9 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 | TC-22 | `gamification` (pelindung diperoleh, dipakai, batas maksimal) | — |
 | TC-23 | `gamification` (XP) | `gamification.spec` |
 | TC-24 | `gamification` (tanggal terbuka) | `gamification.spec` |
+| TC-25 | `gamification` (tantangan, liveChallenges) | `gamification.spec` |
+| TC-26 | `gamification` (medali) | `gamification.spec` |
+| TC-27 | `io-service` (validasi pengaturan) | `gamification.spec` |
 
 ### 10.2 Hasil Verifikasi Persyaratan Non-Fungsional
 
@@ -567,7 +589,7 @@ Seluruh skenario di atas dijalankan otomatis. `npm test` menjalankan unit test d
 | 5. Laporan ✅ | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data ✅ | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
 | 7. Pemolesan ✅ | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
-| 8. Gamifikasi ✅ | FR-21 s.d. FR-24 | Api harian, XP, level, pencapaian |
+| 8. Gamifikasi ✅ | FR-21 s.d. FR-27 | Api harian, XP, level, pencapaian, tantangan mingguan, medali per habit, saklar gamifikasi |
 
 ---
 

@@ -44,7 +44,7 @@ async function TodayContent() {
   return (
     <div className="grid gap-6">
       <TodayChecklist items={items} today={today} game={game} />
-      <AchievementWatcher unlocked={game.achievements.filter((a) => a.unlockedAt !== null).map((a) => ({ id: a.id, title: a.title }))} />
+      {game.enabled && <AchievementWatcher unlocked={game.achievements.filter((a) => a.unlockedAt !== null).map((a) => ({ id: a.id, title: a.title }))} />}
 
       <div className="grid gap-3 text-sm sm:grid-cols-2">
         <Link href="/tracker" className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 hover:border-accent/50">

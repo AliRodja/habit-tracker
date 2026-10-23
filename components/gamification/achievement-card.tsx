@@ -1,4 +1,4 @@
-import { Award, CalendarCheck, CheckCheck, Flame, Lock, Sparkles, Sprout, Star, type LucideIcon } from "lucide-react";
+import { Award, CalendarCheck, CheckCheck, Flame, Lock, Sparkles, Sprout, Star, Target, type LucideIcon } from "lucide-react";
 import { formatDateShort } from "@/lib/format";
 import type { AchievementGroup, AchievementStatus } from "@/lib/gamification";
 
@@ -10,6 +10,7 @@ const GROUP_STYLE: Record<AchievementGroup, { icon: LucideIcon; gradient: string
   formed: { icon: Sprout, gradient: "from-lime-400 to-green-600" },
   checks: { icon: CheckCheck, gradient: "from-indigo-400 to-violet-600" },
   level: { icon: Award, gradient: "from-pink-400 to-rose-600" },
+  challenge: { icon: Target, gradient: "from-cyan-400 to-sky-600" },
 };
 
 export function AchievementCard({ achievement }: { achievement: AchievementStatus }) {

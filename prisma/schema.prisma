@@ -38,6 +38,6 @@ model HabitRecord {
 }
 
 model Setting {
-  key   String @id // "timezone" | "weekStartsOn" | "theme" | "maxActiveHabits"
+  key   String @id // "timezone" | "weekStartsOn" | "theme" | "maxActiveHabits" | "gamification"
   value String
 }

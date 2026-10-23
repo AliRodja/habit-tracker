@@ -35,8 +35,8 @@ Atau mode pengembangan: `npm run dev`.
 | **Tracker** | Grid bulanan dan tahunan bergaya spreadsheet, isi ulang tanggal lalu, catatan harian, navigasi keyboard |
 | **Habit** | Tambah, ubah, urutkan, arsipkan, dan hapus permanen (batas habit aktif dapat diatur 1–10 di Pengaturan) |
 | **Laporan** | Mingguan, bulanan, dan tahunan dengan grafik dan heatmap konsistensi |
-| **Pencapaian** | Api harian (hari beruntun) dengan pelindung, XP dan level, serta 18 lencana |
-| **Pengaturan** | Zona waktu, batas habit aktif, awal minggu, tema, ekspor (JSON/CSV), impor, dan hapus semua data |
+| **Pencapaian** | Api harian (hari beruntun) dengan pelindung, XP dan level, tantangan mingguan, medali per habit, dan 20 lencana (dapat dimatikan di Pengaturan) |
+| **Pengaturan** | Zona waktu, batas habit aktif, awal minggu, gamifikasi, tema, ekspor (JSON/CSV), impor, dan hapus semua data |
 
 ### Pintasan keyboard di Tracker
 

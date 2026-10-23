@@ -66,7 +66,7 @@ async function SettingsContent() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <div id="umum" className="scroll-mt-6">
-        <Card id="general-title" title="Umum" description="Zona waktu, batas habit, awal minggu, dan tampilan.">
+        <Card id="general-title" title="Umum" description="Zona waktu, batas habit, awal minggu, gamifikasi, dan tampilan.">
           <SettingsForm timeZones={timeZones} defaults={settings} />
         </Card>
       </div>

@@ -26,7 +26,7 @@ export function MainNav() {
         {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
           const active = match === "/" ? pathname === "/" : pathname.startsWith(match);
           return (
-            <li key={href} className="flex-1">
+            <li key={href} className={`flex-1 ${match === "/pencapaian" ? "in-data-[gamification=off]:hidden" : ""}`}>
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}

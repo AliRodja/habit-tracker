@@ -7,7 +7,7 @@ import { btnPrimary, inputClass, labelClass } from "@/components/ui/styles";
 import { updateSettings } from "@/lib/actions/settings-actions";
 import { initialFormState } from "@/lib/actions/types";
 import { HABIT_LIMIT, type Theme } from "@/lib/constants";
-import { applyTheme } from "@/lib/theme";
+import { applyGamification, applyTheme } from "@/lib/theme";
 
 const THEME_OPTIONS = [
   { value: "system", label: "Ikuti sistem" },
@@ -17,6 +17,11 @@ const THEME_OPTIONS = [
 
 const LIMIT_OPTIONS = Array.from({ length: HABIT_LIMIT.max - HABIT_LIMIT.min + 1 }, (_, i) => HABIT_LIMIT.min + i);
 
+const GAMIFICATION_OPTIONS = [
+  { value: "on", label: "Aktif" },
+  { value: "off", label: "Nonaktif" },
+];
+
 const WEEK_OPTIONS = [
   { value: "1", label: "Senin" },
   { value: "0", label: "Minggu" },
@@ -24,7 +29,7 @@ const WEEK_OPTIONS = [
 
 interface Props {
   timeZones: string[];
-  defaults: { timezone: string; weekStartsOn: string; theme: string; maxActiveHabits: string };
+  defaults: { timezone: string; weekStartsOn: string; theme: string; maxActiveHabits: string; gamification: string };
 }
 
 export function SettingsForm({ timeZones, defaults }: Props) {
@@ -34,7 +39,9 @@ export function SettingsForm({ timeZones, defaults }: Props) {
 
   // Terapkan tema seketika setelah tersimpan, tanpa menunggu render ulang dari server.
   useEffect(() => {
-    if (state.status === "success" && state.values?.theme) applyTheme(state.values.theme as Theme);
+    if (state.status !== "success" || !state.values) return;
+    if (state.values.theme) applyTheme(state.values.theme as Theme);
+    if (state.values.gamification) applyGamification(state.values.gamification !== "off");
   }, [state]);
 
   return (
@@ -85,6 +92,13 @@ export function SettingsForm({ timeZones, defaults }: Props) {
         <ChoiceChips name="weekStartsOn" options={WEEK_OPTIONS} defaultValue={values.weekStartsOn} />
         <p className="mt-1.5 text-xs text-muted">Dipakai di laporan mingguan dengan pilihan “Minggu kalender”.</p>
         {error("weekStartsOn") && <p className="mt-1.5 text-sm text-danger">{error("weekStartsOn")}</p>}
+      </fieldset>
+
+      <fieldset>
+        <legend className={labelClass}>Gamifikasi</legend>
+        <ChoiceChips name="gamification" options={GAMIFICATION_OPTIONS} defaultValue={values.gamification} />
+        <p className="mt-1.5 text-xs text-muted">Api harian, XP, tantangan mingguan, dan lencana. Matikan bila lebih suka tampilan yang tenang; data tidak hilang.</p>
+        {error("gamification") && <p className="mt-1.5 text-sm text-danger">{error("gamification")}</p>}
       </fieldset>
 
       <fieldset>
