@@ -200,6 +200,19 @@ Data disimpan pada satu file SQLite (default `./data/habits.db`) melalui Prisma 
 **FR-20 — Pengaturan**
 Zona waktu (default `Asia/Jakarta`), hari awal minggu (default Senin), tema (terang/gelap/sistem), serta zona bahaya "Hapus Semua Data" dengan konfirmasi ketik.
 
+**Catatan implementasi pengelolaan data (Fase 6)**
+
+Keputusan yang melengkapi FR-18 sampai FR-20:
+1. **CSV lebar:** sel `1`/`0` hanya untuk habit yang eligible pada tanggal itu. Sebelum tanggal mulai, setelah arsip, dan masa depan dikosongkan (bukan `0`), dan `progress` kosong bila tidak ada habit eligible. Seluruh CSV diawali BOM UTF-8 agar terbaca benar di Excel.
+2. **Sel CSV diawali `=`, `+`, `-`, `@`** diberi awalan tanda petik saat ekspor (mencegah injeksi rumus di spreadsheet) dan dilepas kembali saat impor.
+3. **Impor CSV hanya mendukung mode Gabung.** CSV format panjang tidak memuat atribut habit (tanggal mulai, warna, dst.), sehingga hanya dapat menambah catatan ke habit yang sudah ada. Habit dicocokkan lewat `habit_id`, lalu lewat `habit_name` (habit aktif didahulukan).
+4. **Semua-atau-tidak-sama-sekali:** satu galat validasi saja membuat berkas tidak dapat diterapkan. Pratinjau menampilkan galat per baris (maksimal 50 ditampilkan, jumlah total tetap dilaporkan).
+5. **Pengaturan pada berkas JSON** hanya dipulihkan pada mode Ganti. Mode Gabung mempertahankan pengaturan lokal.
+6. **Catatan sebelum tanggal mulai habit tetap diterima saat impor**, karena FR-02 memang mempertahankannya. Catatan di masa depan ditolak.
+7. **Hapus Semua Data** menghapus seluruh habit dan catatan, tetapi mempertahankan pengaturan. Cadangan otomatis (mode Ganti dan Hapus Semua Data) disimpan di `data/backups/` (dapat diubah lewat `BACKUP_DIR`) dengan nama `habit-tracker-backup-YYYYMMDD-HHmmss-<sebab>.json`.
+8. **Tema** disimpan di database (sumber kebenaran) dan di-*cache* di `localStorage` agar terpasang sebelum halaman dicat. Pilihan "terang"/"gelap" menimpa pengaturan OS lewat atribut `data-theme`.
+9. **Keamanan Route Handler:** `Host` harus `localhost`/`127.0.0.1`/`[::1]` (menahan DNS rebinding), dan request yang mengubah data (`POST /api/import`) harus berasal dari origin yang sama (menahan CSRF dari situs lain di browser yang sama).
+
 ---
 
 ## 5. User Stories
@@ -477,7 +490,7 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 | 3. Pencatatan ✅ | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
 | 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
 | 5. Laporan ✅ | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
-| 6. Data | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
+| 6. Data ✅ | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |
 | 7. Pemolesan | NFR, tema gelap, aksesibilitas, pengujian TC-01 s.d. TC-20 | Rilis MVP |
 
 ---

@@ -57,3 +57,13 @@ export async function checkDates(habitName: string, dates: string[]) {
     db.close();
   }
 }
+
+/** Kembalikan pengaturan ke default agar tes lain tidak terpengaruh zona waktu atau tema. */
+export async function resetSettings() {
+  const db = open();
+  try {
+    db.exec("DELETE FROM Setting");
+  } finally {
+    db.close();
+  }
+}

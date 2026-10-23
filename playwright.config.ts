@@ -12,9 +12,9 @@ export default defineConfig({
   use: { baseURL: `http://127.0.0.1:${PORT}`, locale: "id-ID", timezoneId: "Asia/Jakarta" },
   webServer: {
     // Database e2e dibuat ulang tepat sebelum server menyala, terpisah dari data/habits.db.
-    command: `sh -c "rm -f data/e2e.db* && prisma migrate deploy && next dev -H 127.0.0.1 -p ${PORT}"`,
+    command: `sh -c "rm -rf data/e2e.db* data/e2e-backups && prisma migrate deploy && next dev -H 127.0.0.1 -p ${PORT}"`,
     url: `http://127.0.0.1:${PORT}`,
-    env: { DATABASE_URL },
+    env: { DATABASE_URL, BACKUP_DIR: "data/e2e-backups" },
     reuseExistingServer: false,
     timeout: 120_000,
   },

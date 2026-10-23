@@ -12,3 +12,6 @@ export const SETTING_DEFAULTS = {
   weekStartsOn: "1",
   theme: "system",
 } as const;
+
+/** Kata yang harus diketik untuk menghapus seluruh data (FR-20 zona bahaya). */
+export const RESET_CONFIRM_TEXT = "HAPUS";
