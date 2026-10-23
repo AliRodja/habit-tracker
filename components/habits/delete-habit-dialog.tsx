@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 import { initialFormState, type FormState } from "@/lib/actions/types";
 import { btnDanger, btnSecondary, inputClass } from "@/components/ui/styles";
 
@@ -12,6 +12,7 @@ interface Props {
 
 /** FR-04: penghapusan permanen mewajibkan mengetik nama habit. */
 export function DeleteHabitDialog({ habitName, action }: Props) {
+  const uid = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [typed, setTyped] = useState("");
   const [state, formAction, pending] = useActionState(action, initialFormState);
@@ -29,11 +30,11 @@ export function DeleteHabitDialog({ habitName, action }: Props) {
       <dialog
         ref={dialogRef}
         onClose={() => setTyped("")}
-        aria-labelledby="delete-title"
+        aria-labelledby={`${uid}-title`}
         className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border bg-surface p-5 text-foreground backdrop:bg-black/50"
       >
         <form action={formAction} className="grid gap-4">
-          <h2 id="delete-title" className="text-lg font-semibold">
+          <h2 id={`${uid}-title`} className="text-lg font-semibold">
             Hapus “{habitName}” permanen?
           </h2>
           <p className="text-sm text-muted">
@@ -41,11 +42,11 @@ export function DeleteHabitDialog({ habitName, action }: Props) {
             melanjutkan.
           </p>
           <div>
-            <label htmlFor="confirmName" className="mb-1 block text-sm font-medium">
+            <label htmlFor={`${uid}-confirm`} className="mb-1 block text-sm font-medium">
               Ketik <span className="font-semibold">{habitName}</span>
             </label>
             <input
-              id="confirmName"
+              id={`${uid}-confirm`}
               name="confirmName"
               value={typed}
               onChange={(event) => setTyped(event.target.value)}

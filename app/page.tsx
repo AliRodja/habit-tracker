@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { Suspense } from "react";
-import { db } from "@/lib/db";
+import { TodayChecklist } from "@/components/tracker/today-checklist";
+import { formatDayLong } from "@/lib/format";
+import { getTodayItems } from "@/lib/services/dashboard-service";
 import { getToday } from "@/lib/services/settings-service";
 
 export default function DashboardPage() {
@@ -7,32 +10,30 @@ export default function DashboardPage() {
     <section>
       <h1 className="text-2xl font-semibold tracking-tight">Hari Ini</h1>
       <Suspense fallback={<p className="mt-2 text-muted">Memuat…</p>}>
-        <HabitSummary />
+        <TodayContent />
       </Suspense>
     </section>
   );
 }
 
-// Fase 1: hanya membuktikan pipeline DB → UI berjalan. Check-in sebenarnya dibuat di Fase 3.
-async function HabitSummary() {
-  const [today, habits] = await Promise.all([
-    getToday(),
-    db.habit.findMany({ where: { isActive: true }, orderBy: { orderIndex: "asc" } }),
-  ]);
+async function TodayContent() {
+  const today = await getToday();
+  const items = await getTodayItems(today);
 
   return (
     <>
-      <p className="mt-2 text-muted">
-        {today} · {habits.length} habit aktif
-      </p>
-      <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-        {habits.map((habit) => (
-          <li key={habit.id} className="rounded-xl border border-border bg-surface p-4">
-            <p className="font-medium">{habit.name}</p>
-            {habit.target && <p className="text-sm text-muted">{habit.target}</p>}
-          </li>
-        ))}
-      </ul>
+      <p className="mt-1 text-muted">{formatDayLong(today)}</p>
+      {items.length === 0 ? (
+        <p className="mt-6 text-muted">
+          Belum ada habit aktif.{" "}
+          <Link href="/habits" className="underline underline-offset-2">
+            Tambahkan habit pertama Anda
+          </Link>
+          .
+        </p>
+      ) : (
+        <TodayChecklist items={items} today={today} />
+      )}
     </>
   );
 }

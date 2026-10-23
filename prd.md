@@ -129,7 +129,7 @@ Bila jumlah habit eligible = 0, progres ditampilkan sebagai "–" (bukan 0%) dan
 Pengguna dapat mencentang atau menghapus centang untuk Hari Ini maupun tanggal sebelumnya (dalam rentang eligible). Tanggal masa depan ditolak baik di UI maupun di server.
 
 **FR-10 — Catatan Harian (Opsional)**
-Setiap sel dapat diberi catatan singkat (maks. 200 karakter) melalui klik kanan atau tombol detail. Sel bercatatan menampilkan penanda kecil.
+Setiap sel dapat diberi catatan singkat (maks. 200 karakter) melalui klik kanan, tombol `N`, atau tombol Menu pada keyboard. Sel bercatatan menampilkan penanda kecil.
 
 **FR-11 — Umpan Balik Instan**
 Perubahan centang diterapkan secara *optimistic* di UI. Bila penyimpanan gagal, UI mengembalikan status semula dan menampilkan pesan galat.
@@ -473,7 +473,7 @@ Selain itu, `lib/metrics` diuji dengan *unit test* untuk kasus batas: penyebut n
 |---|---|---|
 | 1. Fondasi ✅ | Inisialisasi Next.js, Tailwind, Prisma + SQLite, skema, *seed* data setahun, layout & navigasi | Aplikasi berjalan dengan data contoh |
 | 2. Habit ✅ | FR-01 s.d. FR-05 | Halaman Habit lengkap dengan arsip |
-| 3. Pencatatan | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
+| 3. Pencatatan ✅ | FR-06 s.d. FR-11 | Dashboard dan grid bulanan/tahunan |
 | 4. Metrik ✅ | `lib/metrics` + unit test, FR-12, FR-13 | Perhitungan teruji, *streak*, tonggak 66 hari |
 | 5. Laporan | FR-14 s.d. FR-16 | Tiga halaman laporan dan heatmap |
 | 6. Data | FR-17 s.d. FR-20 | Ekspor, impor, pengaturan |

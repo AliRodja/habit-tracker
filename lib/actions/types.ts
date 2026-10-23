@@ -9,3 +9,6 @@ export type FormState = {
 };
 
 export const initialFormState: FormState = { status: "idle" };
+
+/** Hasil Server Action yang dipanggil dari event handler (bukan form). */
+export type ActionResult = { ok: true } | { ok: false; message: string };
