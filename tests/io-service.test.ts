@@ -11,7 +11,7 @@ import { writeBackup } from "@/lib/services/backup-service";
 import { resetAllData } from "@/lib/services/data-service";
 import { buildExportFile } from "@/lib/services/export-service";
 import { executeImportPlan, loadExistingState, previewImport, runImport } from "@/lib/services/import-service";
-import { getSettings, updateSettings } from "@/lib/services/settings-store";
+import { getSettings, updateSettings, updateTheme } from "@/lib/services/settings-store";
 
 const today = "2026-10-23";
 let backupDir: string;
@@ -277,5 +277,21 @@ describe("updateSettings (FR-20)", () => {
     expect(result).toMatchObject({ ok: false, fieldErrors: { maxActiveHabits: [expect.stringMatching(/ada 2 habit aktif\. Arsipkan 1 habit/)] } });
     expect(await db.setting.count({ where: { key: "maxActiveHabits" } })).toBe(0); // tidak ada yang tersimpan sebagian
     expect((await updateSettings({ ...valid, maxActiveHabits: "2" })).ok).toBe(true); // sama dengan jumlah aktif: boleh
+  });
+});
+
+describe("updateTheme (tombol terang/gelap)", () => {
+  it("menyimpan hanya tema dan membiarkan pengaturan lain", async () => {
+    await db.setting.create({ data: { key: "timezone", value: "Asia/Makassar" } });
+    expect(await updateTheme("dark")).toEqual({ ok: true });
+    expect(await getSettings()).toMatchObject({ theme: "dark", timezone: "Asia/Makassar" });
+    expect(await updateTheme("light")).toEqual({ ok: true });
+    expect((await getSettings()).theme).toBe("light");
+  });
+
+  it("menolak nilai tidak valid tanpa menyimpan apa pun", async () => {
+    expect(await updateTheme("neon")).toEqual({ ok: false, message: "Tema tidak valid." });
+    expect(await updateTheme(123)).toMatchObject({ ok: false });
+    expect(await db.setting.count({ where: { key: "theme" } })).toBe(0);
   });
 });

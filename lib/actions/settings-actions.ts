@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { resetAllData as resetData } from "@/lib/services/data-service";
-import { updateSettings as saveSettings } from "@/lib/services/settings-store";
-import type { FormState } from "./types";
+import { updateSettings as saveSettings, updateTheme } from "@/lib/services/settings-store";
+import type { ActionResult, FormState } from "./types";
 
 export async function updateSettings(_prev: FormState, formData: FormData): Promise<FormState> {
   const values = {
@@ -27,4 +27,12 @@ export async function resetAllData(_prev: FormState, formData: FormData): Promis
 
   revalidatePath("/", "layout");
   return { status: "success", message: `Seluruh habit dan catatan dihapus. Cadangan otomatis disimpan di ${result.backupPath}` };
+}
+
+/** Tombol terang/gelap: simpan tema ke database agar bertahan dan sinkron dengan halaman Pengaturan. */
+export async function setTheme(theme: string): Promise<ActionResult> {
+  const result = await updateTheme(theme);
+  if (!result.ok) return result;
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

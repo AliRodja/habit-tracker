@@ -191,7 +191,7 @@ test("impor: CSV hanya mendukung mode Gabung dan menggabungkan catatan berdasark
   const date = shiftDate(today(), -3);
   await page.goto("/settings");
   await upload(page, "catatan.csv", `date,habit_id,habit_name,completed,note\n${date},,Minum Air,1,dari csv\n`, "text/csv");
-  await expect(page.getByLabel(/Ganti/)).toBeDisabled();
+  await expect(page.getByRole("radio", { name: /^Ganti/ })).toBeDisabled();
   await page.getByRole("button", { name: "Periksa berkas" }).click();
   await expect(page.getByText(/Pratinjau · CSV · mode Gabung/)).toBeVisible();
   await page.getByRole("button", { name: "Terapkan impor" }).click();

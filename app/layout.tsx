@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { MainNav } from "@/components/layout/main-nav";
 import { PreferencesSync } from "@/components/layout/preferences-sync";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import type { Theme } from "@/lib/constants";
 import { getSettings } from "@/lib/services/settings-store";
 import { PREFERENCES_INIT_SCRIPT } from "@/lib/theme";
@@ -55,9 +56,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <p className="font-semibold">Habit Tracker</p>
               <p className="text-xs text-muted">Kebiasaan kecil, setiap hari</p>
             </div>
+            <ThemeToggle variant="icon" />
           </div>
           <MainNav />
-          <p className="mt-auto hidden items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs text-muted md:flex">
+          <ThemeToggle variant="row" />
+          <p className="hidden items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs text-muted md:flex">
             <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             Semua data tersimpan di komputer ini, tanpa akun dan tanpa internet.
           </p>

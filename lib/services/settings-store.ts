@@ -44,3 +44,11 @@ export async function updateSettings(raw: unknown): Promise<UpdateSettingsResult
     return { ok: true as const };
   });
 }
+
+/** Simpan hanya tema (dipakai tombol terang/gelap di header). Nilai divalidasi di server. */
+export async function updateTheme(raw: unknown): Promise<{ ok: true } | { ok: false; message: string }> {
+  const parsed = settingsSchema.shape.theme.safeParse(raw);
+  if (!parsed.success) return { ok: false, message: "Tema tidak valid." };
+  await db.setting.upsert({ where: { key: "theme" }, create: { key: "theme", value: parsed.data }, update: { value: parsed.data } });
+  return { ok: true };
+}
