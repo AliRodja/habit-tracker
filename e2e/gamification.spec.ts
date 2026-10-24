@@ -152,3 +152,31 @@ test("gamifikasi dapat dimatikan: dashboard tenang dan menu Pencapaian tersembun
   await expect(api(page)).toBeVisible();
   await expect(nav.getByRole("link", { name: "Pencapaian" })).toBeVisible();
 });
+
+test("pop-up +XP muncul sementara lalu hilang dari halaman (FR-22)", async ({ page }) => {
+  await resetWithTwoHabits();
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Minum Air/ }).click();
+  const popup = page.locator("[data-xp-popup]");
+  await expect(popup).toHaveText("+10 XP");
+  await expect(popup).toBeVisible();
+  await expect(popup).toHaveCount(0, { timeout: 3000 }); // dihapus setelah animasi selesai
+
+  // Mencentang lagi memunculkan pop-up baru.
+  await page.getByRole("button", { name: /^Membaca/ }).click();
+  await expect(popup).toHaveText("+35 XP"); // 10 + bonus Hari Sempurna 25
+  await expect(popup).toHaveCount(0, { timeout: 3000 });
+});
+
+test("pop-up +XP tetap terlihat sebentar saat gerak dikurangi, lalu hilang", async ({ browser, baseURL }) => {
+  await resetWithTwoHabits();
+  const context = await browser.newContext({ reducedMotion: "reduce", baseURL });
+  const page = await context.newPage();
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Minum Air/ }).click();
+  const popup = page.locator("[data-xp-popup]");
+  await expect(popup).toBeVisible();
+  expect(await popup.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+  await expect(popup).toHaveCount(0, { timeout: 3000 });
+  await context.close();
+});

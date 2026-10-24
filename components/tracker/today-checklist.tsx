@@ -2,7 +2,7 @@
 
 import { Check, Flame, Shield, Trophy } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition, type CSSProperties } from "react";
 import { FlameBadge } from "@/components/gamification/flame-badge";
 import { WeeklyChallenges } from "@/components/gamification/weekly-challenges";
 import { Notice } from "@/components/ui/notice";
@@ -26,6 +26,15 @@ import type { TodayItem } from "@/lib/services/dashboard-service";
 import type { GamificationView } from "@/lib/services/gamification-service";
 
 type Checked = Record<string, boolean>;
+
+/** Arah percikan pop-up "+XP" (dx, dy). */
+const SPARKS = [
+  ["-26px", "-14px"],
+  ["-14px", "-26px"],
+  ["0px", "-30px"],
+  ["14px", "-26px"],
+  ["26px", "-14px"],
+] as const;
 
 function encouragement(done: number, total: number): string {
   if (done === 0) return "Mulai dari satu kebiasaan dulu. Sedikit tetap berarti.";
@@ -107,6 +116,13 @@ export function TodayChecklist({ items, today, game }: Props) {
   const { done, challenges, xpToday, flame } = liveState(game, items, checked);
   const tier = flameTier(flame.streak);
   const level = levelFromXp(game.xp.beforeToday + xpToday);
+
+  // Pengaman: pop-up "+XP" selalu hilang, termasuk bila animasi dimatikan (prefers-reduced-motion).
+  useEffect(() => {
+    if (!gain) return;
+    const timer = setTimeout(() => setGain(null), 1900);
+    return () => clearTimeout(timer);
+  }, [gain]);
 
   useEffect(() => {
     if (!celebration) return;
@@ -259,18 +275,32 @@ export function TodayChecklist({ items, today, game }: Props) {
                 }`}
               >
                 {gain?.id === id && isChecked && (
+                  // Pop-up sementara; dihapus saat animasinya sendiri selesai (atau oleh timer bila gerak dikurangi).
                   <span
                     key={gain.key}
                     aria-hidden
-                    className="pointer-events-none absolute top-2 right-3 animate-[float-up_1.1s_ease-out_forwards] text-sm font-bold text-orange-600 dark:text-orange-400"
+                    data-xp-popup
+                    onAnimationEnd={(event) => {
+                      if (event.target === event.currentTarget) setGain(null); // abaikan animasi percikan di dalamnya
+                    }}
+                    className="pointer-events-none absolute -top-3 right-4 z-10 animate-[xp-pop_1.6s_linear_forwards] rounded-full bg-linear-to-b from-amber-300 to-orange-400 px-2.5 py-1 text-sm font-bold text-stone-900 shadow-md shadow-orange-500/30 will-change-transform motion-reduce:animate-none"
                   >
                     +{gain.xp} XP
+                    {SPARKS.map(([dx, dy], i) => (
+                      <span
+                        key={i}
+                        className="absolute top-1/2 left-1/2 size-1.5 animate-[xp-spark_0.7s_ease-out_forwards] rounded-full bg-amber-400 motion-reduce:hidden"
+                        style={{ "--dx": dx, "--dy": dy } as CSSProperties}
+                      />
+                    ))}
                   </span>
                 )}
                 <span
+                  // Key berbeda dari pop-up (saudara satu induk) agar React tidak salah mencocokkan elemen.
+                  key={gain?.id === id ? `check-${gain.key}` : "check-idle"}
                   className={`flex size-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                     isChecked ? `${colorDot(item.habit.color)} border-transparent text-white` : "border-border text-transparent group-hover:text-muted/60"
-                  }`}
+                  } ${gain?.id === id && isChecked ? "animate-[check-pop_0.45s_ease-out] motion-reduce:animate-none" : ""}`}
                   aria-hidden
                 >
                   <Check className="size-6" strokeWidth={3} />
