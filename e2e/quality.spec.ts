@@ -114,8 +114,9 @@ test("TC-13: 66 hari tercentang memberi lencana Terbentuk di dashboard (FR-13)",
   await page.goto("/");
   const card = page.getByRole("listitem").filter({ hasText: "Minum Air" });
   await expect(card.getByText("66 / 66 hari")).toBeVisible(); // 63 + 3 hari dari beforeEach
-  await expect(card.getByText("✓ Terbentuk")).toBeVisible();
-  await expect(page.getByRole("listitem").filter({ hasText: "Membaca" }).getByText("✓ Terbentuk")).toHaveCount(0);
+  await expect(card.getByText("Terbentuk", { exact: true })).toBeVisible();
+  await expect(card.locator("svg.lucide-badge-check")).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Membaca" }).getByText("Terbentuk", { exact: true })).toHaveCount(0);
 });
 
 test("NFR-02: server hanya menerima koneksi dari 127.0.0.1, bukan dari alamat jaringan lokal", async ({ baseURL }) => {

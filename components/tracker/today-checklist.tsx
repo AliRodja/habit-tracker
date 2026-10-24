@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Flame, Shield, Trophy } from "lucide-react";
+import { BadgeCheck, Check, Flame, PartyPopper, Shield, Target, Trophy, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition, type CSSProperties } from "react";
 import { FlameBadge } from "@/components/gamification/flame-badge";
@@ -27,6 +27,15 @@ import type { GamificationView } from "@/lib/services/gamification-service";
 
 type Checked = Record<string, boolean>;
 
+/** Jenis perayaan menentukan ikon lucide yang tampil di samping pesannya. */
+const CELEBRATION_ICONS = { flame: Flame, perfect: PartyPopper, challenge: Target } satisfies Record<string, LucideIcon>;
+type Celebration = { kind: keyof typeof CELEBRATION_ICONS; text: string; key: number };
+
+function CelebrationIcon({ kind }: { kind: Celebration["kind"] }) {
+  const Icon = CELEBRATION_ICONS[kind];
+  return <Icon className="size-4 shrink-0 text-amber-300 dark:text-orange-600" aria-hidden />;
+}
+
 /** Arah percikan pop-up "+XP" (dx, dy). */
 const SPARKS = [
   ["-26px", "-14px"],
@@ -39,7 +48,7 @@ const SPARKS = [
 function encouragement(done: number, total: number): string {
   if (done === 0) return "Mulai dari satu kebiasaan dulu. Sedikit tetap berarti.";
   if (done < total) return `Bagus! Tinggal ${total - done} lagi untuk hari ini.`;
-  return "Sempurna! Semua kebiasaan hari ini sudah selesai. 🎉";
+  return "Sempurna! Semua kebiasaan hari ini sudah selesai.";
 }
 
 /** Lingkaran progres harian; angka persentase ditampilkan sebagai teks terpisah agar terbaca semua orang. */
@@ -75,7 +84,10 @@ function DayProgress({ done, total }: { done: number; total: number }) {
         <p className="font-semibold">
           {done} dari {total} selesai
         </p>
-        <p className="text-xs text-muted">{encouragement(done, total)}</p>
+        <p className="flex items-start gap-1 text-xs text-muted">
+          {total > 0 && done === total && <PartyPopper className="mt-px size-3.5 shrink-0 text-orange-500" aria-hidden />}
+          {encouragement(done, total)}
+        </p>
       </div>
     </div>
   );
@@ -111,7 +123,7 @@ export function TodayChecklist({ items, today, game }: Props) {
   const [error, setError] = useState<string | null>(null);
   /** Hadiah instan: "+XP" yang melayang dari kartu, dan pesan perayaan di panel api. */
   const [gain, setGain] = useState<{ id: string; xp: number; key: number } | null>(null);
-  const [celebration, setCelebration] = useState<{ text: string; key: number } | null>(null);
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
 
   const { done, challenges, xpToday, flame } = liveState(game, items, checked);
   const tier = flameTier(flame.streak);
@@ -138,14 +150,17 @@ export function TodayChecklist({ items, today, game }: Props) {
     // `key` bertambah setiap kali agar animasi diputar ulang walau kartu yang sama dicentang lagi.
     setGain((prev) => ({ id, xp, key: (prev?.key ?? 0) + 1 }));
 
-    const text = finished.length
-      ? `🎯 Tantangan selesai: ${finished.map((c: LiveChallenge) => challengeTitle(c, c.habitId ? game.habitInfo[c.habitId]?.name : undefined)).join(", ")}! +${finished.length * CHALLENGE_BONUS} XP`
+    const message: Omit<Celebration, "key"> | null = finished.length
+      ? {
+          kind: "challenge",
+          text: `Tantangan selesai: ${finished.map((c: LiveChallenge) => challengeTitle(c, c.habitId ? game.habitInfo[c.habitId]?.name : undefined)).join(", ")}! +${finished.length * CHALLENGE_BONUS} XP`,
+        }
       : perfect
-        ? `🎉 Hari Sempurna! Bonus +${PERFECT_DAY_BONUS} XP`
+        ? { kind: "perfect", text: `Hari Sempurna! Bonus +${PERFECT_DAY_BONUS} XP` }
         : done === 0
-          ? `🔥 Api menyala! ${game.todayVariants.lit.streak} hari beruntun`
+          ? { kind: "flame", text: `Api menyala! ${game.todayVariants.lit.streak} hari beruntun` }
           : null;
-    if (text) setCelebration((prev) => ({ text, key: (prev?.key ?? 0) + 1 }));
+    if (message) setCelebration((prev) => ({ ...message, key: (prev?.key ?? 0) + 1 }));
   }
 
   function toggle(id: string) {
@@ -241,6 +256,7 @@ export function TodayChecklist({ items, today, game }: Props) {
           <p role="status" aria-live="polite">
             {celebration && (
               <span key={celebration.key} className="mt-3 flex w-fit animate-[pop-in_0.25s_ease-out] items-center gap-2 rounded-full bg-foreground px-3.5 py-1.5 text-sm font-semibold text-background">
+                <CelebrationIcon kind={celebration.kind} />
                 {celebration.text}
               </span>
             )}
@@ -336,7 +352,11 @@ export function TodayChecklist({ items, today, game }: Props) {
                         style={{ width: `${Math.min(100, (days / item.milestoneTarget) * 100)}%` }}
                       />
                     </span>
-                    {formed && <span className="mt-2 inline-flex rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-success">✓ Terbentuk</span>}
+                    {formed && (
+                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-success">
+                        <BadgeCheck className="size-3.5" aria-hidden /> Terbentuk
+                      </span>
+                    )}
                   </span>
                 </span>
               </button>

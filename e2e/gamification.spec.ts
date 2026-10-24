@@ -23,13 +23,17 @@ test("api, XP, dan perayaan berubah seketika saat mencentang (FR-21, FR-22)", as
 
   await page.getByRole("button", { name: /^Minum Air/ }).click();
   await expect(api(page).getByRole("heading", { name: "4 hari beruntun" })).toBeVisible();
-  await expect(page.getByText("🔥 Api menyala! 4 hari beruntun")).toBeVisible();
+  const flameMsg = page.getByRole("status").filter({ hasText: "Api menyala! 4 hari beruntun" });
+  await expect(flameMsg).toBeVisible();
+  await expect(flameMsg.locator("svg.lucide-flame")).toBeVisible();
   await expect(page.getByText("+10 XP", { exact: true })).toBeAttached();
   await expect(api(page).getByText("+10 XP hari ini")).toBeVisible();
   await expect(api(page).getByText("Api hari ini sudah menyala.")).toBeVisible();
 
   await page.getByRole("button", { name: /^Membaca/ }).click();
-  await expect(page.getByText("🎉 Hari Sempurna! Bonus +25 XP")).toBeVisible();
+  const perfectMsg = page.getByRole("status").filter({ hasText: "Hari Sempurna! Bonus +25 XP" });
+  await expect(perfectMsg).toBeVisible();
+  await expect(perfectMsg.locator("svg.lucide-party-popper")).toBeVisible();
   await expect(api(page).getByText("+45 XP hari ini")).toBeVisible();
 
   await page.reload();
@@ -102,7 +106,9 @@ test("tantangan mingguan: progres bertambah seketika dan perayaan saat selesai (
 
   test.skip(before.length < 2, "hari ini terlalu awal dalam minggu untuk menyelesaikan 3 Hari Sempurna");
   await page.getByRole("button", { name: /^Membaca/ }).click();
-  await expect(page.getByText("🎯 Tantangan selesai: 3 Hari Sempurna! +50 XP")).toBeVisible();
+  const challengeMsg = page.getByRole("status").filter({ hasText: "Tantangan selesai: 3 Hari Sempurna! +50 XP" });
+  await expect(challengeMsg).toBeVisible();
+  await expect(challengeMsg.locator("svg.lucide-target")).toBeVisible();
   await expect(challengeRow(page, "3 Hari Sempurna")).toContainText("Selesai · +50 XP");
   // XP hari ini: 2 centang (20) + Hari Sempurna (25) + tantangan (50)
   await expect(api(page).getByText("+95 XP hari ini")).toBeVisible();
